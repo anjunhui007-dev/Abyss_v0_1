@@ -71,7 +71,7 @@ func _build_ui() -> void:
 	_make_label("THE GREAT LABYRINTH", Vector2(25, 9), 11, Color("d7b77b"))
 	_make_label("대미궁 아비스", Vector2(25, 26), 26, Color("f0f4fa"))
 	_make_label("제1층   /   초원 지대", Vector2(455, 30), 18, Color("e5c28a"))
-	_make_label("PC  ·  v0.2.2", Vector2(1130, 33), 13, Color("91a9bd"))
+	_make_label("PC  ·  v0.2.3", Vector2(1130, 33), 13, Color("91a9bd"))
 	_make_label("탐사자", Vector2(29, 90), 17, Color("d9ba7e"))
 	_make_label("아이젠 하이르", Vector2(29, 121), 20, Color("f1f5f9"))
 	_make_label("인간  ·  탐사자", Vector2(29, 151), 13, Color("9fb3c4"))
@@ -91,14 +91,16 @@ func _build_ui() -> void:
 	reward_label.position = Vector2(990, 173)
 	reward_label.size = Vector2(250, 240)
 	reward_label.bbcode_enabled = true
-	reward_label.scroll_active = false
+	reward_label.scroll_active = true
+	reward_label.scroll_following = false
+	reward_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	reward_label.add_theme_font_size_override("normal_font_size", 14)
 	add_child(reward_label)
 	log_label = _make_label("", Vector2(990, 408), 12, Color("a5b6c7"))
 	log_label.size = Vector2(250, 28)
 	log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_make_label("지도 범례", Vector2(286, 603), 12, Color("d9ba7e"))
-	for legend in [["플레이어", 320, 618], ["몬스터", 535, 618], ["보물상자", 750, 618], ["장애물", 320, 635], ["미탐사", 535, 635], ["탐사 지역", 750, 635]]:
+	for legend in [["플레이어", 320, 612], ["몬스터", 535, 612], ["보물상자", 750, 612], ["장애물", 320, 629], ["미탐사", 535, 629], ["탐사 지역", 750, 629]]:
 		_make_label(str(legend[0]), Vector2(float(legend[1]), float(legend[2])), 11, Color("a5b6c7"))
 	_make_label("탐사 진행", Vector2(990, 454), 14, Color("d9ba7e"))
 	activity_value = _make_label("", Vector2(990, 484), 15)
@@ -144,8 +146,8 @@ func _build_ui() -> void:
 
 func _record_event(title_text: String, gained_gold: int = 0, gained_exp: int = 0) -> void:
 	history.push_front({"title": title_text, "gold": gained_gold, "exp": gained_exp})
-	if history.size() > 6:
-		history.resize(6)
+	if history.size() > 300:
+		history.resize(300)
 
 func _generate_map() -> void:
 	walls.clear()
@@ -340,6 +342,7 @@ func _refresh() -> void:
 			line += "\n[font_size=12]" + "    ".join(reward_parts) + "[/font_size]"
 		entries.append(line)
 	reward_label.text = "\n\n".join(entries)
+	reward_label.scroll_to_line(0)
 	activity_value.text = "활동   %d / 10" % activity
 	day_value.text = "던전   %d일차" % day
 	if phase == "battle":
@@ -374,7 +377,7 @@ func _draw() -> void:
 	draw_rect(Rect2(989, 131, 263, 1), Color("3b4e60"))
 	for i in range(6):
 		var sx: float = 305.0 + float(i % 3) * 215.0
-		var sy: float = 621.0 + float(i / 3) * 17.0
+		var sy: float = 615.0 + float(i / 3) * 17.0
 		var tint: Color = [Color("79c7fa"), Color("e37d75"), Color("e5bb68"), Color("5b6872"), Color("0d1720"), Color("385f50")][i]
 		draw_rect(Rect2(sx, sy, 9, 9), tint)
 	draw_rect(Rect2(989, 438, 263, 1), Color("3b4e60"))
@@ -412,7 +415,7 @@ func _save() -> void:
 	for p in monsters.keys(): m.append([p.x, p.y, monsters[p]])
 	var c: Array = []
 	for p in chests.keys(): c.append([p.x, p.y])
-	var data := {"player": [player.x, player.y], "explored": e, "monsters": m, "chests": c, "hp": hp, "mp": mp, "gold": gold, "exp": exp_points, "level": level, "activity": activity, "day": day}
+	var data := {"player": [player.x, player.y], "explored": e, "monsters": m, "chests": c, "hp": hp, "mp": mp, "gold": gold, "exp": exp_points, "level": level, "activity": activity, "day": day, "history": history}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		message = "저장 실패"
@@ -447,5 +450,11 @@ func _load() -> void:
 	phase = "explore"
 	battle_panel.visible = false
 	history.clear()
+	if data.has("history") and data["history"] is Array:
+		for event_data in data["history"]:
+			if event_data is Dictionary and event_data.has("title") and event_data.has("gold") and event_data.has("exp"):
+				history.append({"title": str(event_data["title"]), "gold": int(event_data["gold"]), "exp": int(event_data["exp"])})
+				if history.size() >= 300:
+					break
 	message = "저장 데이터 불러오기 완료!"
 	_refresh()
