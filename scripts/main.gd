@@ -72,6 +72,7 @@ func _style(bg: String, border: String = "35485a", radius: int = 12) -> StyleBox
 func _panel(pos: Vector2, dimensions: Vector2, bg: String = "1b2938") -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.position = pos
+	panel.show_behind_parent = true
 	panel.custom_minimum_size = dimensions
 	panel.add_theme_stylebox_override("panel", _style(bg))
 	add_child(panel)
@@ -250,6 +251,7 @@ func _build_ui() -> void:
 	for item in [["◇", "탐사"], ["♙", "캐릭터"], ["▣", "가방"], ["♜", "장비"], ["✦", "정수"], ["▤", "도감"]]:
 		_make_menu_item(bottom_row, item[0], item[1])
 	settings_popup = _panel(Vector2(996, 66), Vector2(265, 172), "223448")
+	settings_popup.show_behind_parent = false
 	var settings_content := VBoxContainer.new()
 	settings_content.add_theme_constant_override("separation", 12)
 	settings_popup.add_child(settings_content)
