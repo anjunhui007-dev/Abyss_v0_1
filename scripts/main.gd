@@ -35,6 +35,11 @@ var log_label: Label
 var battle_panel: PanelContainer
 var battle_label: Label
 var actions: HBoxContainer
+var hp_value: Label
+var mp_value: Label
+var xp_value: Label
+var activity_value: Label
+var day_value: Label
 
 func _ready() -> void:
 	_build_ui()
@@ -51,44 +56,76 @@ func _make_label(text_value: String, pos: Vector2, font_size: int, tint: Color =
 	add_child(label)
 	return label
 
+func _make_card_button(title_text: String, x: float, shortcut: String) -> void:
+	var item := _make_label(title_text, Vector2(x, 672), 14, Color("d6e3ec"))
+	_make_label(shortcut, Vector2(x, 692), 10, Color("8096a8"))
+
 func _build_ui() -> void:
 	var bg := ColorRect.new()
 	bg.color = Color("101923")
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.show_behind_parent = true
 	add_child(bg)
-	_make_label("대미궁 아비스", Vector2(26, 17), 28, Color("f0e2bd"))
-	_make_label("제1층  /  초원 지대", Vector2(300, 27), 18)
-	_make_label("v0.2.0  ·  PC PROTOTYPE", Vector2(1010, 30), 14, Color("9cb4c7"))
-	_make_label("탐사자 정보", Vector2(27, 90), 20, Color("f0e2bd"))
-	_make_label("탐사 기록", Vector2(980, 90), 20, Color("f0e2bd"))
-	_make_label("격자 탐사  ·  WASD / 방향키", Vector2(285, 90), 16, Color("c2d8c4"))
-	_make_label("조작  WASD 이동   E 상자   F5 저장   F9 불러오기", Vector2(280, 664), 14, Color("aebfce"))
-	_make_label("전투: 공격 / 정수 스킬 / 방어 / 도주 / 턴 종료", Vector2(280, 687), 12, Color("879bae"))
-	status_label = _make_label("", Vector2(27, 138), 17)
-	status_label.custom_minimum_size = Vector2(215, 460)
-	log_label = _make_label("", Vector2(980, 140), 15)
-	log_label.custom_minimum_size = Vector2(270, 480)
+	_make_label("THE GREAT LABYRINTH", Vector2(25, 9), 11, Color("d7b77b"))
+	_make_label("대미궁 아비스", Vector2(25, 26), 26, Color("f0f4fa"))
+	_make_label("제1층   /   초원 지대", Vector2(455, 30), 18, Color("e5c28a"))
+	_make_label("PC  ·  v0.2.1", Vector2(1130, 33), 13, Color("91a9bd"))
+	_make_label("탐사자", Vector2(29, 90), 17, Color("d9ba7e"))
+	_make_label("아이젠 하이르", Vector2(29, 121), 20, Color("f1f5f9"))
+	_make_label("인간  ·  탐사자", Vector2(29, 151), 13, Color("9fb3c4"))
+	_make_label("생명력", Vector2(29, 219), 13, Color("c4d2dd"))
+	_make_label("마력", Vector2(29, 279), 13, Color("c4d2dd"))
+	_make_label("경험치", Vector2(29, 339), 13, Color("c4d2dd"))
+	hp_value = _make_label("", Vector2(151, 219), 12)
+	mp_value = _make_label("", Vector2(151, 279), 12)
+	xp_value = _make_label("", Vector2(151, 339), 12)
+	_make_label("능력치", Vector2(29, 403), 15, Color("d9ba7e"))
+	status_label = _make_label("", Vector2(29, 433), 14)
+	_make_label("탐사 지도", Vector2(286, 88), 18, Color("e4edf3"))
+	_make_label("WASD / 방향키", Vector2(790, 92), 12, Color("9fb6c6"))
+	_make_label("탐사 기록", Vector2(989, 90), 18, Color("d9ba7e"))
+	_make_label("현재 상황", Vector2(990, 143), 13, Color("9fb6c6"))
+	log_label = _make_label("", Vector2(990, 173), 16, Color("e3eaf0"))
 	log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	log_label.size = Vector2(270, 470)
+	log_label.size = Vector2(250, 240)
+	_make_label("탐사 진행", Vector2(990, 454), 14, Color("d9ba7e"))
+	activity_value = _make_label("", Vector2(990, 484), 15)
+	day_value = _make_label("", Vector2(990, 520), 14, Color("aebfcf"))
+	_make_label("조작 안내", Vector2(990, 565), 13, Color("d9ba7e"))
+	_make_label("E  상자 열기", Vector2(990, 592), 12, Color("aebfcf"))
+	_make_label("F5  저장   ·   F9  불러오기", Vector2(990, 612), 12, Color("aebfcf"))
+	_make_card_button("탐사", 42, "W A S D")
+	_make_card_button("캐릭터", 257, "준비 중")
+	_make_card_button("가방", 461, "준비 중")
+	_make_card_button("장비", 663, "11슬롯 예정")
+	_make_card_button("정수", 862, "준비 중")
+	_make_card_button("도감", 1070, "준비 중")
 	battle_panel = PanelContainer.new()
-	battle_panel.position = Vector2(292, 170)
-	battle_panel.custom_minimum_size = Vector2(650, 360)
+	battle_panel.position = Vector2(294, 176)
+	battle_panel.custom_minimum_size = Vector2(652, 365)
 	battle_panel.visible = false
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("1d2c3c")
+	style.border_color = Color("b59660")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	style.set_content_margin_all(16)
+	battle_panel.add_theme_stylebox_override("panel", style)
 	add_child(battle_panel)
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 12)
+	content.add_theme_constant_override("separation", 13)
 	battle_panel.add_child(content)
 	battle_label = Label.new()
-	battle_label.custom_minimum_size = Vector2(625, 265)
-	battle_label.add_theme_font_size_override("font_size", 19)
+	battle_label.custom_minimum_size = Vector2(610, 262)
+	battle_label.add_theme_font_size_override("font_size", 18)
 	content.add_child(battle_label)
 	actions = HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 5)
 	content.add_child(actions)
 	for data in [["공격", "attack"], ["정수 스킬", "skill"], ["방어", "guard"], ["도주", "flee"], ["턴 종료", "end"]]:
 		var btn := Button.new()
 		btn.text = data[0]
-		btn.custom_minimum_size = Vector2(118, 46)
+		btn.custom_minimum_size = Vector2(116, 44)
 		btn.pressed.connect(_battle_action.bind(data[1]))
 		actions.add_child(btn)
 		buttons.append(btn)
@@ -266,46 +303,70 @@ func _check_camp() -> void:
 
 func _refresh() -> void:
 	var max_hp: int = 100 + (level - 1) * 20
-	status_label.text = "아이젠 하이르\n인간  ·  탐사자\n\n레벨  %d\nHP   %d / %d\nMP   %d / 30\nEXP  %d / %d\n\n보유 골드  %d G\n\nSTR  20     AGI  5\nMAG   5     LUK 20\n\n활동  %d / 10\n던전  %d일차\n\n정수  회색 송곳니\n장비  11슬롯 (준비 중)" % [level, hp, max_hp, mp, exp_points, level * 100, gold, activity, day]
+	hp_value.text = "%d / %d" % [hp, max_hp]
+	mp_value.text = "%d / 30" % mp
+	xp_value.text = "%d / %d" % [exp_points, level * 100]
+	status_label.text = "Lv. %d\n\nSTR   20     AGI   5\nMAG    5     LUK  20\n\n골드   %d G\n\n정수   회색 송곳니\n장비   11슬롯 (예정)" % [level, gold]
 	log_label.text = message
+	activity_value.text = "활동   %d / 10" % activity
+	day_value.text = "던전   %d일차" % day
 	if phase == "battle":
-		battle_label.text = "전투: %s\n적 HP: %d / %d\n내 HP: %d   MP: %d   AP: %.1f / 2.0\n\n%s" % [enemy_name, maxi(0, enemy_hp), enemy_max_hp, hp, mp, ap, "\n".join(combat_log.slice(maxi(0, combat_log.size() - 5)))]
+		battle_label.text = "전투  ·  %s\n\n적 HP  %d / %d\n내 HP  %d     MP  %d     AP  %.1f / 2.0\n\n%s" % [enemy_name, maxi(0, enemy_hp), enemy_max_hp, hp, mp, ap, "\n".join(combat_log.slice(maxi(0, combat_log.size() - 5)))]
 		buttons[0].disabled = ap < 1.0
 		buttons[1].disabled = ap < 1.0 or mp < 8
 		buttons[2].disabled = ap < 0.5
 		buttons[3].disabled = ap < 0.5
 	queue_redraw()
 
+func _card(rect: Rect2, color: Color) -> void:
+	draw_rect(rect, color)
+	draw_rect(rect, Color("35475a"), false, 1.0)
+
+func _bar(y: float, fraction: float, tint: Color) -> void:
+	var width_value: float = 205.0
+	draw_rect(Rect2(29, y, width_value, 9), Color("304052"))
+	draw_rect(Rect2(29, y, width_value * clampf(fraction, 0.0, 1.0), 9), tint)
+
 func _draw() -> void:
-	draw_rect(Rect2(12, 75, 244, 566), Color("1b2938"))
-	draw_rect(Rect2(267, 75, 697, 566), Color("1a3029"))
-	draw_rect(Rect2(971, 75, 297, 566), Color("1b2938"))
-	draw_rect(Rect2(12, 650, 1256, 58), Color("202e3e"))
-	draw_rect(Rect2(267, 116, 697, 525), Color("0b1514"))
+	draw_rect(Rect2(0, 0, 1280, 720), Color("101923"))
+	draw_rect(Rect2(0, 65, 1280, 2), Color("b59660"))
+	_card(Rect2(15, 77, 239, 563), Color("1b2938"))
+	_card(Rect2(267, 77, 697, 563), Color("1b2938"))
+	_card(Rect2(977, 77, 288, 563), Color("1b2938"))
+	_card(Rect2(15, 650, 1250, 63), Color("1b2938"))
+	draw_rect(Rect2(29, 190, 205, 1), Color("3b4e60"))
+	draw_rect(Rect2(29, 390, 205, 1), Color("3b4e60"))
+	_bar(244, float(hp) / float(maxi(1, 100 + (level - 1) * 20)), Color("d96b76"))
+	_bar(304, float(mp) / 30.0, Color("649ee8"))
+	_bar(364, float(exp_points) / float(maxi(1, level * 100)), Color("d8b66f"))
+	draw_rect(Rect2(989, 131, 263, 1), Color("3b4e60"))
+	draw_rect(Rect2(989, 438, 263, 1), Color("3b4e60"))
+	draw_rect(Rect2(989, 551, 263, 1), Color("3b4e60"))
 	for y in range(H):
 		for x in range(W):
 			var p: Vector2i = Vector2i(x, y)
 			var rect: Rect2 = Rect2(ORIGIN + Vector2(x * CELL, y * CELL), Vector2(CELL - 2, CELL - 2))
 			var dist: int = absi(x - player.x) + absi(y - player.y)
 			if not explored.has(p):
-				draw_rect(rect, Color("090e15"))
+				draw_rect(rect, Color("0d1720"))
 				continue
 			var visible_now: bool = dist <= 4 and absi(x - player.x) <= 3 and absi(y - player.y) <= 3
-			var c: Color = Color("3d6546")
+			var c: Color = Color("385f50")
 			if walls.has(p):
-				c = Color("58606a")
-			elif (x + y) % 5 == 0:
-				c = Color("446f4a")
+				c = Color("5b6872")
+			elif (x + y) % 7 == 0:
+				c = Color("436c54")
 			if not visible_now:
-				c = c.darkened(0.6)
+				c = c.darkened(0.62)
 			draw_rect(rect, c)
 			if visible_now and chests.has(p):
-				draw_rect(rect.grow(-10), Color("e2b657"))
+				draw_rect(rect.grow(-10), Color("e5bb68"))
 			if visible_now and monsters.has(p):
-				draw_circle(rect.get_center(), 12, Color("cf6e62"))
+				draw_circle(rect.get_center(), 12, Color("e37d75"))
 			if p == player:
-				draw_circle(rect.get_center(), 13, Color("68b8f2"))
-				draw_circle(rect.get_center(), 6, Color("f5f9ff"))
+				draw_circle(rect.get_center(), 13, Color("79c7fa"))
+				draw_arc(rect.get_center(), 15, 0, TAU, 24, Color("d7f1ff"), 2.0)
+				draw_circle(rect.get_center(), 5, Color("f5f9ff"))
 
 func _save() -> void:
 	var e: Array = []
