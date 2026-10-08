@@ -44,6 +44,53 @@ var reward_label: RichTextLabel
 var history: Array[Dictionary] = []
 var settings_popup: PanelContainer
 var stat_values: Dictionary = {}
+var stats: Dictionary = {"STR":20,"AGI":5,"HP":5,"MP":5,"WIL":5,"MAG":5,"LUK":20}
+var stat_points: int = 0
+var stat_popup: PanelContainer
+var stat_popup_info: Label
+var stat_buttons: Dictionary = {}
+var points_button: Button
+const MONSTER_TYPES := ["wolf","slime","rat","beetle"]
+
+func _max_hp() -> int:
+	return 100 + (level - 1) * 20 + (int(stats["HP"]) - 5) * 20
+
+func _max_mp() -> int:
+	return 30 + (int(stats["MP"]) - 5) * 5
+
+func _required_exp() -> int:
+	return 100 + (level - 1) * 140
+
+func _toggle_stats() -> void:
+	stat_popup.visible = not stat_popup.visible
+	if stat_popup.visible:
+		settings_popup.visible = false
+
+func _invest_stat(name: String) -> void:
+	if stat_points <= 0 or phase == "battle":
+		return
+	stat_points -= 1
+	stats[name] = int(stats[name]) + 1
+	if name == "HP":
+		hp += 20
+	if name == "MP":
+		mp += 5
+	message = "%s +1! 남은 포인트 %d" % [name, stat_points]
+	_record_event("%s +1 투자" % name)
+	_refresh()
+
+func _respawn_monsters() -> void:
+	var candidates: Array[Vector2i] = []
+	for x in range(1, W - 1):
+		for y in range(1, H - 1):
+			var tile := Vector2i(x, y)
+			if not walls.has(tile) and not monsters.has(tile) and not chests.has(tile) and tile != player:
+				candidates.append(tile)
+	candidates.shuffle()
+	for i in range(mini(12, candidates.size())):
+		monsters[candidates[i]] = MONSTER_TYPES[randi_range(0, MONSTER_TYPES.size() - 1)]
+	_record_event("테스트 몬스터 재출현")
+
 
 func _ready() -> void:
 	_build_ui()
@@ -205,6 +252,11 @@ func _build_ui() -> void:
 	stat_column.add_child(stat_grid)
 	for stat in [["STR", "20"], ["AGI", "5"], ["HP", "5"], ["MP", "5"], ["WIL", "5"], ["MAG", "5"], ["LUK", "20"]]:
 		_stat_card(stat_grid, stat[0], stat[1])
+	points_button = Button.new()
+	points_button.text = "능력치 투자 (0 P)"
+	points_button.custom_minimum_size = Vector2(195, 26)
+	points_button.pressed.connect(_toggle_stats)
+	left_col.add_child(points_button)
 	var gold_label := Label.new()
 	gold_label.add_theme_color_override("font_color", Color("f1c76d"))
 	gold_label.add_theme_font_size_override("font_size", 15)
@@ -274,6 +326,34 @@ func _build_ui() -> void:
 		label.add_theme_font_size_override("font_size", 14)
 		settings_content.add_child(label)
 	settings_popup.visible = false
+	stat_popup = _panel(Vector2(390, 125), Vector2(480, 440), "223448")
+	var stat_col := VBoxContainer.new()
+	stat_col.add_theme_constant_override("separation", 7)
+	stat_popup.add_child(stat_col)
+	var stat_heading := Label.new()
+	stat_heading.text = "능력치 투자  ·  닫기: Esc"
+	stat_heading.add_theme_font_size_override("font_size", 19)
+	stat_col.add_child(stat_heading)
+	stat_popup_info = Label.new()
+	stat_col.add_child(stat_popup_info)
+	for name in ["STR","AGI","HP","MP","WIL","MAG","LUK"]:
+		var stat_row := HBoxContainer.new()
+		stat_col.add_child(stat_row)
+		var label := Label.new()
+		label.text = name
+		label.custom_minimum_size = Vector2(90, 30)
+		stat_row.add_child(label)
+		var value := Label.new()
+		value.custom_minimum_size = Vector2(265, 30)
+		stat_row.add_child(value)
+		stat_values["popup_" + name] = value
+		var plus := Button.new()
+		plus.text = "+1"
+		plus.custom_minimum_size = Vector2(60, 30)
+		plus.pressed.connect(_invest_stat.bind(name))
+		stat_row.add_child(plus)
+		stat_buttons[name] = plus
+	stat_popup.visible = false
 	battle_panel = PanelContainer.new()
 	battle_panel.position = Vector2(294, 176)
 	battle_panel.custom_minimum_size = Vector2(652, 365)
@@ -290,7 +370,7 @@ func _build_ui() -> void:
 	actions = HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 5)
 	content.add_child(actions)
-	for data in [["공격", "attack"], ["정수 스킬", "skill"], ["방어", "guard"], ["도주", "flee"], ["턴 종료", "end"]]:
+	for data in [["1 공격", "attack"], ["2 스킬", "skill"], ["3 방어", "guard"], ["4 도주", "flee"], ["5 턴 종료", "end"]]:
 		var btn := Button.new()
 		btn.text = data[0]
 		btn.custom_minimum_size = Vector2(116, 44)
@@ -316,18 +396,35 @@ func _generate_map() -> void:
 	monsters[Vector2i(7, 6)] = "wolf"
 	monsters[Vector2i(4, 9)] = "slime"
 	monsters[Vector2i(13, 9)] = "wolf"
+	for spawn in [[3,9,"rat"],[8,3,"beetle"],[10,3,"slime"],[13,6,"rat"],[7,10,"beetle"],[11,10,"slime"],[3,2,"slime"],[14,7,"wolf"]]:
+		monsters[Vector2i(int(spawn[0]), int(spawn[1]))] = str(spawn[2])
 	chests[Vector2i(3, 3)] = true
 	chests[Vector2i(14, 3)] = true
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ESCAPE:
+			if stat_popup.visible:
+				stat_popup.visible = false
+			else:
+				_toggle_settings()
+			get_viewport().set_input_as_handled()
+			return
 		if event.keycode == KEY_F5:
 			_save()
 			return
 		if event.keycode == KEY_F9:
 			_load()
 			return
-		if phase != "explore":
+		if settings_popup.visible or stat_popup.visible:
+			return
+		if phase == "battle":
+			match event.keycode:
+				KEY_1, KEY_KP_1: _battle_action("attack")
+				KEY_2, KEY_KP_2: _battle_action("skill")
+				KEY_3, KEY_KP_3: _battle_action("guard")
+				KEY_4, KEY_KP_4: _battle_action("flee")
+				KEY_5, KEY_KP_5: _battle_action("end")
 			return
 		var d := Vector2i.ZERO
 		match event.keycode:
@@ -337,6 +434,11 @@ func _input(event: InputEvent) -> void:
 			KEY_D, KEY_RIGHT: d = Vector2i.RIGHT
 			KEY_E:
 				_open_chest()
+				return
+			KEY_R:
+				_respawn_monsters()
+				message = "테스트 몬스터 재출현!"
+				_refresh()
 				return
 		if d != Vector2i.ZERO:
 			_move(d)
@@ -381,11 +483,13 @@ func _open_chest() -> void:
 
 func _start_battle(kind: String) -> void:
 	phase = "battle"
-	enemy_name = "회색 늑대" if kind == "wolf" else "슬라임"
-	enemy_max_hp = 42 if kind == "wolf" else 32
+	var definitions: Dictionary = {"wolf":["회색 늑대",42,12,16],"slime":["슬라임",32,7,12],"rat":["이끼쥐",26,9,11],"beetle":["껍질딱정벌레",55,8,17]}
+	var data: Array = definitions.get(kind, definitions["slime"])
+	enemy_name = str(data[0])
+	enemy_max_hp = int(data[1])
 	enemy_hp = enemy_max_hp
-	enemy_attack = 12 if kind == "wolf" else 7
-	enemy_exp = 16 if kind == "wolf" else 12
+	enemy_attack = int(data[2])
+	enemy_exp = int(data[3])
 	ap = 2.0
 	guard = false
 	combat_log = [enemy_name + "와 조우했다!"]
@@ -400,14 +504,14 @@ func _battle_action(action: String) -> void:
 		"attack":
 			if ap < 1.0: return
 			ap -= 1.0
-			var damage := randi_range(17, 25)
+			var damage: int = randi_range(17, 25) + (int(stats["STR"]) - 20) * 2
 			enemy_hp -= damage
 			combat_log.append("기본 공격! %d 피해" % damage)
 		"skill":
 			if ap < 1.0 or mp < 8: return
 			ap -= 1.0
 			mp -= 8
-			var damage := randi_range(12, 18) + randi_range(12, 18)
+			var damage: int = randi_range(12, 18) + randi_range(12, 18) + (int(stats["MAG"]) - 5)
 			enemy_hp -= damage
 			combat_log.append("송곳니 연격! %d 피해 (MP -8)" % damage)
 		"guard":
@@ -437,7 +541,7 @@ func _battle_action(action: String) -> void:
 	_refresh()
 
 func _enemy_turn() -> void:
-	var damage := maxi(1, enemy_attack + randi_range(-2, 2) - 2)
+	var damage: int = maxi(1, enemy_attack + randi_range(-2, 2) - 2 - (int(stats["WIL"]) - 5))
 	if guard:
 		damage = maxi(1, roundi(damage * 0.75))
 	hp -= damage
@@ -445,8 +549,8 @@ func _enemy_turn() -> void:
 	guard = false
 	ap = 2.0
 	if hp <= 0:
-		hp = 100
-		mp = 30
+		hp = _max_hp()
+		mp = _max_mp()
 		player = Vector2i(2, 6)
 		phase = "explore"
 		battle_panel.visible = false
@@ -459,11 +563,15 @@ func _win() -> void:
 	activity += 1
 	message = "%s 처치! EXP +%d, 골드 +15G" % [enemy_name, enemy_exp]
 	_record_event(enemy_name + " 처치", 15, enemy_exp)
-	if exp_points >= level * 100:
-		exp_points -= level * 100
+	while level < 50 and exp_points >= _required_exp():
+		exp_points -= _required_exp()
 		level += 1
-		hp += 20
-		message += "  레벨 업! Lv.%d" % level
+		stat_points += 5
+		hp = mini(_max_hp(), hp + 20)
+		message += "  레벨 업! Lv.%d (+5P)" % level
+		_record_event("레벨 업! Lv.%d · +5P" % level)
+	if level >= 50:
+		exp_points = 0
 	phase = "explore"
 	battle_panel.visible = false
 	_check_camp()
@@ -473,20 +581,27 @@ func _check_camp() -> void:
 	if activity >= 10:
 		activity -= 10
 		day += 1
-		hp = mini(100 + (level - 1) * 20, hp + 25)
-		mp = mini(30, mp + 10)
+		hp = mini(_max_hp(), hp + 25)
+		mp = mini(_max_mp(), mp + 10)
+		_respawn_monsters()
 		message += "  야영 완료! HP +25, MP +10 / %d일차" % day
 
 func _refresh() -> void:
-	var max_hp: int = 100 + (level - 1) * 20
+	var max_hp: int = _max_hp()
 	hp_value.text = "%d / %d" % [hp, max_hp]
-	mp_value.text = "%d / 30" % mp
-	xp_value.text = "%d / %d" % [exp_points, level * 100]
+	mp_value.text = "%d / %d" % [mp, _max_mp()]
+	xp_value.text = "%d / %d" % [exp_points, _required_exp()]
 	status_label.text = "Lv. %d" % level
 	stat_values["gold"].text = "◈  %d G" % gold
+	points_button.text = "능력치 투자 (%d P)" % stat_points
+	stat_popup_info.text = "남은 포인트: %d P" % stat_points
+	for name in stats.keys():
+		stat_values[name].text = str(stats[name])
+		stat_values["popup_" + name].text = str(stats[name])
+		stat_buttons[name].disabled = stat_points <= 0 or phase == "battle"
 	stat_values["bar_HP"].value = 100.0 * float(hp) / float(maxi(1, max_hp))
-	stat_values["bar_MP"].value = 100.0 * float(mp) / 30.0
-	stat_values["bar_EXP"].value = 100.0 * float(exp_points) / float(maxi(1, level * 100))
+	stat_values["bar_MP"].value = 100.0 * float(mp) / float(_max_mp())
+	stat_values["bar_EXP"].value = 100.0 * float(exp_points) / float(_required_exp())
 	log_label.text = message
 	var entries: Array[String] = []
 	for event_data in history:
@@ -552,7 +667,7 @@ func _save() -> void:
 	for p in monsters.keys(): m.append([p.x, p.y, monsters[p]])
 	var c: Array = []
 	for p in chests.keys(): c.append([p.x, p.y])
-	var data := {"player": [player.x, player.y], "explored": e, "monsters": m, "chests": c, "hp": hp, "mp": mp, "gold": gold, "exp": exp_points, "level": level, "activity": activity, "day": day, "history": history}
+	var data := {"player": [player.x, player.y], "explored": e, "monsters": m, "chests": c, "hp": hp, "mp": mp, "gold": gold, "exp": exp_points, "level": level, "activity": activity, "day": day, "history": history, "stats": stats, "stat_points": stat_points}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		message = "저장 실패"
@@ -584,8 +699,18 @@ func _load() -> void:
 	level = int(data.level)
 	activity = int(data.activity)
 	day = int(data.day)
+	stats = {"STR":20,"AGI":5,"HP":5,"MP":5,"WIL":5,"MAG":5,"LUK":20}
+	if data.has("stats") and data["stats"] is Dictionary:
+		for name in stats.keys():
+			if data["stats"].has(name):
+				stats[name] = maxi(1, int(data["stats"][name]))
+	stat_points = maxi(0, int(data.get("stat_points", 0)))
+	hp = clampi(hp, 0, _max_hp())
+	mp = clampi(mp, 0, _max_mp())
 	phase = "explore"
 	battle_panel.visible = false
+	stat_popup.visible = false
+	settings_popup.visible = false
 	history.clear()
 	if data.has("history") and data["history"] is Array:
 		for event_data in data["history"]:
