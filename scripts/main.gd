@@ -46,6 +46,7 @@ func _build_ui() -> void:
 	var bg := ColorRect.new()
 	bg.color = Color("101923")
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.show_behind_parent = true
 	add_child(bg)
 	var title := Label.new()
 	title.text = "대미궁 아비스  |  1층 · 초원  |  v0.1.0"
