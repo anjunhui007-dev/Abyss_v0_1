@@ -271,11 +271,11 @@ func _draw() -> void:
 		for x in range(W):
 			var p := Vector2i(x, y)
 			var rect := Rect2(ORIGIN + Vector2(x * CELL, y * CELL), Vector2(CELL - 2, CELL - 2))
-			var dist := abs(x - player.x) + abs(y - player.y)
+			var dist: int = absi(x - player.x) + absi(y - player.y)
 			if not explored.has(p):
 				draw_rect(rect, Color("090e15"))
 				continue
-			var visible_now := dist <= 4 and abs(x - player.x) <= 3 and abs(y - player.y) <= 3
+			var visible_now: bool = dist <= 4 and absi(x - player.x) <= 3 and absi(y - player.y) <= 3
 			var c := Color("3d6546")
 			if walls.has(p): c = Color("58606a")
 			if not visible_now: c = c.darkened(0.6)
