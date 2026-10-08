@@ -2,8 +2,8 @@ extends Control
 
 const W := 17
 const H := 13
-const CELL := 40
-const ORIGIN := Vector2(275, 121)
+const CELL := 36
+const ORIGIN := Vector2(305, 135)
 const SAVE_PATH := "user://abyss_save.json"
 const DIRS := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 
@@ -40,6 +40,8 @@ var mp_value: Label
 var xp_value: Label
 var activity_value: Label
 var day_value: Label
+var reward_label: RichTextLabel
+var history: Array[Dictionary] = []
 
 func _ready() -> void:
 	_build_ui()
@@ -57,7 +59,7 @@ func _make_label(text_value: String, pos: Vector2, font_size: int, tint: Color =
 	return label
 
 func _make_card_button(title_text: String, x: float, shortcut: String) -> void:
-	var item := _make_label(title_text, Vector2(x, 672), 14, Color("d6e3ec"))
+	_make_label(title_text, Vector2(x, 672), 14, Color("d6e3ec"))
 	_make_label(shortcut, Vector2(x, 692), 10, Color("8096a8"))
 
 func _build_ui() -> void:
@@ -69,7 +71,7 @@ func _build_ui() -> void:
 	_make_label("THE GREAT LABYRINTH", Vector2(25, 9), 11, Color("d7b77b"))
 	_make_label("대미궁 아비스", Vector2(25, 26), 26, Color("f0f4fa"))
 	_make_label("제1층   /   초원 지대", Vector2(455, 30), 18, Color("e5c28a"))
-	_make_label("PC  ·  v0.2.1", Vector2(1130, 33), 13, Color("91a9bd"))
+	_make_label("PC  ·  v0.2.2", Vector2(1130, 33), 13, Color("91a9bd"))
 	_make_label("탐사자", Vector2(29, 90), 17, Color("d9ba7e"))
 	_make_label("아이젠 하이르", Vector2(29, 121), 20, Color("f1f5f9"))
 	_make_label("인간  ·  탐사자", Vector2(29, 151), 13, Color("9fb3c4"))
@@ -79,15 +81,25 @@ func _build_ui() -> void:
 	hp_value = _make_label("", Vector2(151, 219), 12)
 	mp_value = _make_label("", Vector2(151, 279), 12)
 	xp_value = _make_label("", Vector2(151, 339), 12)
-	_make_label("능력치", Vector2(29, 403), 15, Color("d9ba7e"))
-	status_label = _make_label("", Vector2(29, 433), 14)
+	_make_label("기본 능력치", Vector2(29, 403), 15, Color("d9ba7e"))
+	status_label = _make_label("", Vector2(29, 434), 14)
 	_make_label("탐사 지도", Vector2(286, 88), 18, Color("e4edf3"))
 	_make_label("WASD / 방향키", Vector2(790, 92), 12, Color("9fb6c6"))
 	_make_label("탐사 기록", Vector2(989, 90), 18, Color("d9ba7e"))
-	_make_label("현재 상황", Vector2(990, 143), 13, Color("9fb6c6"))
-	log_label = _make_label("", Vector2(990, 173), 16, Color("e3eaf0"))
+	_make_label("최근 이벤트", Vector2(990, 143), 13, Color("9fb6c6"))
+	reward_label = RichTextLabel.new()
+	reward_label.position = Vector2(990, 173)
+	reward_label.size = Vector2(250, 240)
+	reward_label.bbcode_enabled = true
+	reward_label.scroll_active = false
+	reward_label.add_theme_font_size_override("normal_font_size", 14)
+	add_child(reward_label)
+	log_label = _make_label("", Vector2(990, 408), 12, Color("a5b6c7"))
+	log_label.size = Vector2(250, 28)
 	log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	log_label.size = Vector2(250, 240)
+	_make_label("지도 범례", Vector2(286, 603), 12, Color("d9ba7e"))
+	for legend in [["플레이어", 320, 618], ["몬스터", 535, 618], ["보물상자", 750, 618], ["장애물", 320, 635], ["미탐사", 535, 635], ["탐사 지역", 750, 635]]:
+		_make_label(str(legend[0]), Vector2(float(legend[1]), float(legend[2])), 11, Color("a5b6c7"))
 	_make_label("탐사 진행", Vector2(990, 454), 14, Color("d9ba7e"))
 	activity_value = _make_label("", Vector2(990, 484), 15)
 	day_value = _make_label("", Vector2(990, 520), 14, Color("aebfcf"))
@@ -129,6 +141,11 @@ func _build_ui() -> void:
 		btn.pressed.connect(_battle_action.bind(data[1]))
 		actions.add_child(btn)
 		buttons.append(btn)
+
+func _record_event(title_text: String, gained_gold: int = 0, gained_exp: int = 0) -> void:
+	history.push_front({"title": title_text, "gold": gained_gold, "exp": gained_exp})
+	if history.size() > 6:
+		history.resize(6)
 
 func _generate_map() -> void:
 	walls.clear()
@@ -199,6 +216,7 @@ func _open_chest() -> void:
 			gold += 35
 			activity += 1
 			message = "낡은 상자를 열었다! 35G 획득."
+			_record_event("낡은 상자 개봉", 35)
 			_check_camp()
 			_refresh()
 			return
@@ -215,6 +233,7 @@ func _start_battle(kind: String) -> void:
 	ap = 2.0
 	guard = false
 	combat_log = [enemy_name + "와 조우했다!"]
+	_record_event(enemy_name + " 발견")
 	battle_panel.visible = true
 	_refresh()
 
@@ -283,6 +302,7 @@ func _win() -> void:
 	gold += 15
 	activity += 1
 	message = "%s 처치! EXP +%d, 골드 +15G" % [enemy_name, enemy_exp]
+	_record_event(enemy_name + " 처치", 15, enemy_exp)
 	if exp_points >= level * 100:
 		exp_points -= level * 100
 		level += 1
@@ -306,8 +326,20 @@ func _refresh() -> void:
 	hp_value.text = "%d / %d" % [hp, max_hp]
 	mp_value.text = "%d / 30" % mp
 	xp_value.text = "%d / %d" % [exp_points, level * 100]
-	status_label.text = "Lv. %d\n\nSTR   20     AGI   5\nMAG    5     LUK  20\n\n골드   %d G\n\n정수   회색 송곳니\n장비   11슬롯 (예정)" % [level, gold]
+	status_label.text = "Lv. %d\n\nSTR  20      AGI   5\nHP     5      MP    5\nWIL    5      MAG   5\nLUK  20\n\n골드  %d G\n정수  회색 송곳니" % [level, gold]
 	log_label.text = message
+	var entries: Array[String] = []
+	for event_data in history:
+		var line: String = "[color=#eaf0f5]" + str(event_data["title"]) + "[/color]"
+		var reward_parts: Array[String] = []
+		if int(event_data["gold"]) > 0:
+			reward_parts.append("[color=#f1c76d]+%d G[/color]" % int(event_data["gold"]))
+		if int(event_data["exp"]) > 0:
+			reward_parts.append("[color=#85b7ff]+%d EXP[/color]" % int(event_data["exp"]))
+		if not reward_parts.is_empty():
+			line += "\n[font_size=12]" + "    ".join(reward_parts) + "[/font_size]"
+		entries.append(line)
+	reward_label.text = "\n\n".join(entries)
 	activity_value.text = "활동   %d / 10" % activity
 	day_value.text = "던전   %d일차" % day
 	if phase == "battle":
@@ -340,6 +372,11 @@ func _draw() -> void:
 	_bar(304, float(mp) / 30.0, Color("649ee8"))
 	_bar(364, float(exp_points) / float(maxi(1, level * 100)), Color("d8b66f"))
 	draw_rect(Rect2(989, 131, 263, 1), Color("3b4e60"))
+	for i in range(6):
+		var sx: float = 305.0 + float(i % 3) * 215.0
+		var sy: float = 621.0 + float(i / 3) * 17.0
+		var tint: Color = [Color("79c7fa"), Color("e37d75"), Color("e5bb68"), Color("5b6872"), Color("0d1720"), Color("385f50")][i]
+		draw_rect(Rect2(sx, sy, 9, 9), tint)
 	draw_rect(Rect2(989, 438, 263, 1), Color("3b4e60"))
 	draw_rect(Rect2(989, 551, 263, 1), Color("3b4e60"))
 	for y in range(H):
@@ -409,5 +446,6 @@ func _load() -> void:
 	day = int(data.day)
 	phase = "explore"
 	battle_panel.visible = false
+	history.clear()
 	message = "저장 데이터 불러오기 완료!"
 	_refresh()
