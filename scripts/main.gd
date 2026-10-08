@@ -7,7 +7,13 @@ const ORIGIN := Vector2(335, 145)
 const SAVE_PATH := "user://abyss_save.json"
 const DIRS := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 
-var player := Vector2i(2, 6)
+const START_TILE := Vector2i(1, 11)
+const REGION_NAMES := ["초원 지대", "이끼 숲", "폐허 지대", "지하 습지"]
+var current_region: int = 0
+var region_states: Dictionary = {}
+var region_popup: PanelContainer
+var region_title: Label
+var player := START_TILE
 var explored: Dictionary = {}
 var monsters: Dictionary = {}
 var walls: Dictionary = {}
@@ -64,6 +70,8 @@ func _required_exp() -> int:
 func _toggle_stats() -> void:
 	stat_popup.visible = not stat_popup.visible
 	if stat_popup.visible:
+		region_popup.visible = false
+	if stat_popup.visible:
 		settings_popup.visible = false
 
 func _invest_stat(name: String) -> void:
@@ -91,6 +99,56 @@ func _respawn_monsters() -> void:
 		monsters[candidates[i]] = MONSTER_TYPES[randi_range(0, MONSTER_TYPES.size() - 1)]
 	_record_event("테스트 몬스터 재출현")
 
+
+func _region_title() -> String:
+	return REGION_NAMES[current_region]
+
+func _pack_region() -> Dictionary:
+	var seen: Array = []
+	for p in explored.keys():
+		seen.append([p.x, p.y])
+	var enemies: Array = []
+	for p in monsters.keys():
+		enemies.append([p.x, p.y, monsters[p]])
+	var treasure: Array = []
+	for p in chests.keys():
+		treasure.append([p.x, p.y])
+	return {"explored": seen, "monsters": enemies, "chests": treasure}
+
+func _unpack_region(data: Dictionary) -> void:
+	explored.clear()
+	monsters.clear()
+	chests.clear()
+	for p in data.get("explored", []):
+		explored[Vector2i(int(p[0]), int(p[1]))] = true
+	for p in data.get("monsters", []):
+		monsters[Vector2i(int(p[0]), int(p[1]))] = str(p[2])
+	for p in data.get("chests", []):
+		chests[Vector2i(int(p[0]), int(p[1]))] = true
+
+func _toggle_region_map() -> void:
+	if phase != "explore":
+		return
+	region_popup.visible = not region_popup.visible
+	if region_popup.visible:
+		settings_popup.visible = false
+		stat_popup.visible = false
+
+func _change_region(target: int) -> void:
+	if phase != "explore" or target < 0 or target >= REGION_NAMES.size():
+		return
+	if target != current_region:
+		region_states[str(current_region)] = _pack_region()
+		current_region = target
+		_generate_map()
+		if region_states.has(str(current_region)):
+			_unpack_region(region_states[str(current_region)])
+		player = START_TILE
+		_reveal()
+		_record_event("%s 진입" % _region_title())
+		message = "%s에 도착했다. 왼쪽 아래에서 탐사를 시작한다." % _region_title()
+	region_popup.visible = false
+	_refresh()
 
 func _ready() -> void:
 	_build_ui()
@@ -180,6 +238,8 @@ func _make_menu_item(parent: Node, icon_text: String, title_text: String) -> voi
 
 func _toggle_settings() -> void:
 	settings_popup.visible = not settings_popup.visible
+	if settings_popup.visible:
+		region_popup.visible = false
 
 func _build_ui() -> void:
 	var bg := ColorRect.new()
@@ -189,7 +249,7 @@ func _build_ui() -> void:
 	add_child(bg)
 	_make_label("THE GREAT LABYRINTH", Vector2(25, 7), 11, Color("d7b77b"))
 	_make_label("대미궁 아비스", Vector2(25, 24), 26, Color("f0f4fa"))
-	_make_label("제1층  ·  초원 지대", Vector2(512, 26), 18, Color("e5c28a"))
+	region_title = _make_label("", Vector2(512, 26), 18, Color("e5c28a"))
 	var settings_button := Button.new()
 	settings_button.text = "⚙"
 	settings_button.position = Vector2(1220, 12)
@@ -269,7 +329,14 @@ func _build_ui() -> void:
 	var middle := _panel(Vector2(267, 76), Vector2(697, 563))
 	middle.show_behind_parent = true
 	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_make_label("◇  탐사 지도", Vector2(288, 91), 18, Color("eaf0f5"))
+	var map_button := Button.new()
+	map_button.text = "◇  탐사 지도  ▾"
+	map_button.position = Vector2(282, 86)
+	map_button.custom_minimum_size = Vector2(180, 35)
+	map_button.add_theme_stylebox_override("normal", _style("223448", "35485a", 7))
+	map_button.add_theme_font_size_override("font_size", 16)
+	map_button.pressed.connect(_toggle_region_map)
+	add_child(map_button)
 	_make_label("WASD / 방향키", Vector2(827, 97), 12, Color("9fb3c5"))
 	_make_label("지도 범례", Vector2(287, 586), 12, Color("d9b878"))
 	var legend_data := [["플레이어", 307, 605], ["몬스터", 510, 605], ["보물상자", 713, 605], ["장애물", 307, 622], ["미탐사", 510, 622], ["탐사 지역", 713, 622]]
@@ -315,6 +382,32 @@ func _build_ui() -> void:
 	bottom.add_child(bottom_row)
 	for item in [["◇", "탐사"], ["♙", "캐릭터"], ["▣", "가방"], ["♜", "장비"], ["✦", "정수"], ["▤", "도감"]]:
 		_make_menu_item(bottom_row, item[0], item[1])
+	var region_button := Button.new()
+	region_button.text = "지역 선택  M"
+	region_button.position = Vector2(790, 88)
+	region_button.custom_minimum_size = Vector2(160, 32)
+	region_button.pressed.connect(_toggle_region_map)
+	add_child(region_button)
+	region_popup = _panel(Vector2(430, 135), Vector2(420, 420), "223448")
+	var region_col := VBoxContainer.new()
+	region_col.add_theme_constant_override("separation", 15)
+	region_popup.add_child(region_col)
+	var region_heading := Label.new()
+	region_heading.text = "1층 · 지역 지도"
+	region_heading.add_theme_font_size_override("font_size", 22)
+	region_col.add_child(region_heading)
+	var region_hint := Label.new()
+	region_hint.text = "이동할 지역을 선택하세요. 각 지역은 왼쪽 아래에서 시작합니다."
+	region_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	region_hint.custom_minimum_size = Vector2(380, 42)
+	region_col.add_child(region_hint)
+	for i in range(REGION_NAMES.size()):
+		var region_entry := Button.new()
+		region_entry.text = "%d. %s" % [i + 1, REGION_NAMES[i]]
+		region_entry.custom_minimum_size = Vector2(370, 51)
+		region_entry.pressed.connect(_change_region.bind(i))
+		region_col.add_child(region_entry)
+	region_popup.visible = false
 	settings_popup = _panel(Vector2(996, 66), Vector2(265, 172), "223448")
 	settings_popup.show_behind_parent = false
 	var settings_content := VBoxContainer.new()
@@ -387,24 +480,62 @@ func _generate_map() -> void:
 	walls.clear()
 	monsters.clear()
 	chests.clear()
+	explored.clear()
 	for x in range(W):
 		for y in range(H):
 			if x == 0 or y == 0 or x == W - 1 or y == H - 1:
 				walls[Vector2i(x, y)] = true
-	for p in [Vector2i(5, 2), Vector2i(5, 3), Vector2i(5, 4), Vector2i(9, 7), Vector2i(9, 8), Vector2i(12, 4), Vector2i(12, 5)]:
-		walls[p] = true
-	monsters[Vector2i(7, 6)] = "wolf"
-	monsters[Vector2i(4, 9)] = "slime"
-	monsters[Vector2i(13, 9)] = "wolf"
-	for spawn in [[3,9,"rat"],[8,3,"beetle"],[10,3,"slime"],[13,6,"rat"],[7,10,"beetle"],[11,10,"slime"],[3,2,"slime"],[14,7,"wolf"]]:
-		monsters[Vector2i(int(spawn[0]), int(spawn[1]))] = str(spawn[2])
-	chests[Vector2i(3, 3)] = true
-	chests[Vector2i(14, 3)] = true
+	var obstacles: Array = []
+	match current_region:
+		0:
+			obstacles = [[5,2],[5,3],[5,4],[9,7],[9,8],[12,4],[12,5]]
+		1:
+			for x in [4,8,12]:
+				for y in range(2,11):
+					if y != 5 and y != 9:
+						obstacles.append([x,y])
+		2:
+			for x in range(3,15):
+				if x != 7 and x != 12:
+					obstacles.append([x,4])
+				if x != 5 and x != 10:
+					obstacles.append([x,8])
+			for y in [2,3,9,10]:
+				obstacles.append([10,y])
+		3:
+			for y in range(2,11):
+				if y not in [4,8]:
+					obstacles.append([6,y])
+			for x in range(8,15):
+				if x != 11:
+					obstacles.append([x,6])
+			for y in [2,3,9,10]:
+				obstacles.append([12,y])
+	for tile in obstacles:
+		walls[Vector2i(int(tile[0]), int(tile[1]))] = true
+	var spawn_candidates: Array[Vector2i] = []
+	for x in range(1,W-1):
+		for y in range(1,H-1):
+			var tile := Vector2i(x,y)
+			if not walls.has(tile) and tile != START_TILE and tile.distance_to(START_TILE) > 2.5:
+				spawn_candidates.append(tile)
+	spawn_candidates.shuffle()
+	for i in range(mini(13,spawn_candidates.size())):
+		var kind: String = MONSTER_TYPES[(i + current_region) % MONSTER_TYPES.size()]
+		monsters[spawn_candidates[i]] = kind
+	var treasure_candidates: Array[Vector2i] = []
+	for tile in spawn_candidates:
+		if not monsters.has(tile):
+			treasure_candidates.append(tile)
+	for i in range(mini(3,treasure_candidates.size())):
+		chests[treasure_candidates[i]] = true
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE:
-			if stat_popup.visible:
+			if region_popup.visible:
+				region_popup.visible = false
+			elif stat_popup.visible:
 				stat_popup.visible = false
 			else:
 				_toggle_settings()
@@ -416,7 +547,7 @@ func _input(event: InputEvent) -> void:
 		if event.keycode == KEY_F9:
 			_load()
 			return
-		if settings_popup.visible or stat_popup.visible:
+		if settings_popup.visible or stat_popup.visible or region_popup.visible:
 			return
 		if phase == "battle":
 			match event.keycode:
@@ -434,6 +565,9 @@ func _input(event: InputEvent) -> void:
 			KEY_D, KEY_RIGHT: d = Vector2i.RIGHT
 			KEY_E:
 				_open_chest()
+				return
+			KEY_M:
+				_toggle_region_map()
 				return
 			KEY_R:
 				_respawn_monsters()
@@ -526,7 +660,7 @@ func _battle_action(action: String) -> void:
 				combat_log.append("도주 성공!")
 				phase = "explore"
 				battle_panel.visible = false
-				player = Vector2i(2, 6)
+				player = START_TILE
 				message = "도주에 성공했다."
 				_refresh()
 				return
@@ -592,6 +726,7 @@ func _refresh() -> void:
 	mp_value.text = "%d / %d" % [mp, _max_mp()]
 	xp_value.text = "%d / %d" % [exp_points, _required_exp()]
 	status_label.text = "Lv. %d" % level
+	region_title.text = "제1층  ·  %s" % _region_title()
 	stat_values["gold"].text = "◈  %d G" % gold
 	points_button.text = "능력치 투자 (%d P)" % stat_points
 	stat_popup_info.text = "남은 포인트: %d P" % stat_points
@@ -667,7 +802,8 @@ func _save() -> void:
 	for p in monsters.keys(): m.append([p.x, p.y, monsters[p]])
 	var c: Array = []
 	for p in chests.keys(): c.append([p.x, p.y])
-	var data := {"player": [player.x, player.y], "explored": e, "monsters": m, "chests": c, "hp": hp, "mp": mp, "gold": gold, "exp": exp_points, "level": level, "activity": activity, "day": day, "history": history, "stats": stats, "stat_points": stat_points}
+	region_states[str(current_region)] = _pack_region()
+	var data := {"region": current_region, "regions": region_states, "player": [player.x, player.y], "explored": e, "monsters": m, "chests": c, "hp": hp, "mp": mp, "gold": gold, "exp": exp_points, "level": level, "activity": activity, "day": day, "history": history, "stats": stats, "stat_points": stat_points}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		message = "저장 실패"
@@ -685,6 +821,11 @@ func _load() -> void:
 	if file == null: return
 	var data = JSON.parse_string(file.get_as_text())
 	if not data is Dictionary: return
+	current_region = clampi(int(data.get("region", 0)), 0, REGION_NAMES.size() - 1)
+	_generate_map()
+	region_states.clear()
+	if data.has("regions") and data["regions"] is Dictionary:
+		region_states = data["regions"]
 	player = Vector2i(int(data.player[0]), int(data.player[1]))
 	explored.clear()
 	for p in data.explored: explored[Vector2i(int(p[0]), int(p[1]))] = true
@@ -718,5 +859,6 @@ func _load() -> void:
 				history.append({"title": str(event_data["title"]), "gold": int(event_data["gold"]), "exp": int(event_data["exp"])})
 				if history.size() >= 300:
 					break
+	region_popup.visible = false
 	message = "저장 데이터 불러오기 완료!"
 	_refresh()
