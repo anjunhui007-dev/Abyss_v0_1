@@ -3,7 +3,7 @@ extends Control
 const W := 17
 const H := 13
 const CELL := 40
-const ORIGIN := Vector2(270, 90)
+const ORIGIN := Vector2(275, 121)
 const SAVE_PATH := "user://abyss_save.json"
 const DIRS := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 
@@ -42,45 +42,53 @@ func _ready() -> void:
 	_reveal()
 	_refresh()
 
+func _make_label(text_value: String, pos: Vector2, font_size: int, tint: Color = Color("dbe6f0")) -> Label:
+	var label := Label.new()
+	label.text = text_value
+	label.position = pos
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", tint)
+	add_child(label)
+	return label
+
 func _build_ui() -> void:
 	var bg := ColorRect.new()
 	bg.color = Color("101923")
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.show_behind_parent = true
 	add_child(bg)
-	var title := Label.new()
-	title.text = "대미궁 아비스  |  1층 · 초원  |  v0.1.0"
-	title.position = Vector2(24, 15)
-	title.add_theme_font_size_override("font_size", 26)
-	add_child(title)
-	status_label = Label.new()
-	status_label.position = Vector2(20, 95)
-	status_label.custom_minimum_size = Vector2(235, 450)
-	status_label.add_theme_font_size_override("font_size", 17)
-	add_child(status_label)
-	log_label = Label.new()
-	log_label.position = Vector2(275, 635)
-	log_label.custom_minimum_size = Vector2(900, 70)
-	log_label.add_theme_font_size_override("font_size", 16)
-	add_child(log_label)
+	_make_label("대미궁 아비스", Vector2(26, 17), 28, Color("f0e2bd"))
+	_make_label("제1층  /  초원 지대", Vector2(300, 27), 18)
+	_make_label("v0.2.0  ·  PC PROTOTYPE", Vector2(1010, 30), 14, Color("9cb4c7"))
+	_make_label("탐사자 정보", Vector2(27, 90), 20, Color("f0e2bd"))
+	_make_label("탐사 기록", Vector2(980, 90), 20, Color("f0e2bd"))
+	_make_label("격자 탐사  ·  WASD / 방향키", Vector2(285, 90), 16, Color("c2d8c4"))
+	_make_label("조작  WASD 이동   E 상자   F5 저장   F9 불러오기", Vector2(280, 664), 14, Color("aebfce"))
+	_make_label("전투: 공격 / 정수 스킬 / 방어 / 도주 / 턴 종료", Vector2(280, 687), 12, Color("879bae"))
+	status_label = _make_label("", Vector2(27, 138), 17)
+	status_label.custom_minimum_size = Vector2(215, 460)
+	log_label = _make_label("", Vector2(980, 140), 15)
+	log_label.custom_minimum_size = Vector2(270, 480)
+	log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	log_label.size = Vector2(270, 470)
 	battle_panel = PanelContainer.new()
-	battle_panel.position = Vector2(305, 130)
-	battle_panel.custom_minimum_size = Vector2(635, 390)
+	battle_panel.position = Vector2(292, 170)
+	battle_panel.custom_minimum_size = Vector2(650, 360)
 	battle_panel.visible = false
 	add_child(battle_panel)
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 16)
+	content.add_theme_constant_override("separation", 12)
 	battle_panel.add_child(content)
 	battle_label = Label.new()
-	battle_label.custom_minimum_size = Vector2(600, 270)
-	battle_label.add_theme_font_size_override("font_size", 21)
+	battle_label.custom_minimum_size = Vector2(625, 265)
+	battle_label.add_theme_font_size_override("font_size", 19)
 	content.add_child(battle_label)
 	actions = HBoxContainer.new()
 	content.add_child(actions)
 	for data in [["공격", "attack"], ["정수 스킬", "skill"], ["방어", "guard"], ["도주", "flee"], ["턴 종료", "end"]]:
 		var btn := Button.new()
 		btn.text = data[0]
-		btn.custom_minimum_size = Vector2(116, 48)
+		btn.custom_minimum_size = Vector2(118, 46)
 		btn.pressed.connect(_battle_action.bind(data[1]))
 		actions.add_child(btn)
 		buttons.append(btn)
@@ -257,7 +265,8 @@ func _check_camp() -> void:
 		message += "  야영 완료! HP +25, MP +10 / %d일차" % day
 
 func _refresh() -> void:
-	status_label.text = "아이젠 하이르\n인간 · 탐사자\n\nLv.%d\nHP %d / %d\nMP %d / 30\nEXP %d / %d\n골드 %dG\n\nSTR 20   AGI 5\nMAG 5   LUK 20\n\n활동 %d / 10\n던전 %d일차\n\n정수: 회색 송곳니\n장비 슬롯: 11개(추후 UI)\n\nF5 저장 / F9 불러오기" % [level, hp, 100 + (level - 1) * 20, mp, exp_points, level * 100, gold, activity, day]
+	var max_hp: int = 100 + (level - 1) * 20
+	status_label.text = "아이젠 하이르\n인간  ·  탐사자\n\n레벨  %d\nHP   %d / %d\nMP   %d / 30\nEXP  %d / %d\n\n보유 골드  %d G\n\nSTR  20     AGI  5\nMAG   5     LUK 20\n\n활동  %d / 10\n던전  %d일차\n\n정수  회색 송곳니\n장비  11슬롯 (준비 중)" % [level, hp, max_hp, mp, exp_points, level * 100, gold, activity, day]
 	log_label.text = message
 	if phase == "battle":
 		battle_label.text = "전투: %s\n적 HP: %d / %d\n내 HP: %d   MP: %d   AP: %.1f / 2.0\n\n%s" % [enemy_name, maxi(0, enemy_hp), enemy_max_hp, hp, mp, ap, "\n".join(combat_log.slice(maxi(0, combat_log.size() - 5)))]
@@ -268,18 +277,27 @@ func _refresh() -> void:
 	queue_redraw()
 
 func _draw() -> void:
+	draw_rect(Rect2(12, 75, 244, 566), Color("1b2938"))
+	draw_rect(Rect2(267, 75, 697, 566), Color("1a3029"))
+	draw_rect(Rect2(971, 75, 297, 566), Color("1b2938"))
+	draw_rect(Rect2(12, 650, 1256, 58), Color("202e3e"))
+	draw_rect(Rect2(267, 116, 697, 525), Color("0b1514"))
 	for y in range(H):
 		for x in range(W):
-			var p := Vector2i(x, y)
-			var rect := Rect2(ORIGIN + Vector2(x * CELL, y * CELL), Vector2(CELL - 2, CELL - 2))
+			var p: Vector2i = Vector2i(x, y)
+			var rect: Rect2 = Rect2(ORIGIN + Vector2(x * CELL, y * CELL), Vector2(CELL - 2, CELL - 2))
 			var dist: int = absi(x - player.x) + absi(y - player.y)
 			if not explored.has(p):
 				draw_rect(rect, Color("090e15"))
 				continue
 			var visible_now: bool = dist <= 4 and absi(x - player.x) <= 3 and absi(y - player.y) <= 3
-			var c := Color("3d6546")
-			if walls.has(p): c = Color("58606a")
-			if not visible_now: c = c.darkened(0.6)
+			var c: Color = Color("3d6546")
+			if walls.has(p):
+				c = Color("58606a")
+			elif (x + y) % 5 == 0:
+				c = Color("446f4a")
+			if not visible_now:
+				c = c.darkened(0.6)
 			draw_rect(rect, c)
 			if visible_now and chests.has(p):
 				draw_rect(rect.grow(-10), Color("e2b657"))
