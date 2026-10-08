@@ -147,7 +147,7 @@ func _reveal() -> void:
 
 func _open_chest() -> void:
 	for d in DIRS + [Vector2i.ZERO]:
-		var p := player + d
+		var p: Vector2i = player + d
 		if chests.has(p):
 			chests.erase(p)
 			gold += 35
