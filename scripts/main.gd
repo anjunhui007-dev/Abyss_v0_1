@@ -95,9 +95,11 @@ func _respawn_monsters() -> void:
 			if not walls.has(tile) and not monsters.has(tile) and not chests.has(tile) and tile != player:
 				candidates.append(tile)
 	candidates.shuffle()
-	for i in range(mini(12, candidates.size())):
+	var spawn_count: int = mini(2, mini(maxi(0, 6 - monsters.size()), candidates.size()))
+	for i in range(spawn_count):
 		monsters[candidates[i]] = MONSTER_TYPES[randi_range(0, MONSTER_TYPES.size() - 1)]
-	_record_event("테스트 몬스터 재출현")
+	if spawn_count > 0:
+		_record_event("몬스터 %d마리 재출현" % spawn_count)
 
 
 func _region_title() -> String:
@@ -329,15 +331,7 @@ func _build_ui() -> void:
 	var middle := _panel(Vector2(267, 76), Vector2(697, 563))
 	middle.show_behind_parent = true
 	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var map_button := Button.new()
-	map_button.text = "◇  탐사 지도  ▾"
-	map_button.position = Vector2(282, 86)
-	map_button.custom_minimum_size = Vector2(180, 35)
-	map_button.add_theme_stylebox_override("normal", _style("223448", "35485a", 7))
-	map_button.add_theme_font_size_override("font_size", 16)
-	map_button.pressed.connect(_toggle_region_map)
-	add_child(map_button)
-	_make_label("WASD / 방향키", Vector2(827, 97), 12, Color("9fb3c5"))
+	_make_label("◇  탐사 지도", Vector2(288, 91), 18, Color("eaf0f5"))
 	_make_label("지도 범례", Vector2(287, 586), 12, Color("d9b878"))
 	var legend_data := [["플레이어", 307, 605], ["몬스터", 510, 605], ["보물상자", 713, 605], ["장애물", 307, 622], ["미탐사", 510, 622], ["탐사 지역", 713, 622]]
 	for item in legend_data:
@@ -383,9 +377,13 @@ func _build_ui() -> void:
 	for item in [["◇", "탐사"], ["♙", "캐릭터"], ["▣", "가방"], ["♜", "장비"], ["✦", "정수"], ["▤", "도감"]]:
 		_make_menu_item(bottom_row, item[0], item[1])
 	var region_button := Button.new()
-	region_button.text = "지역 선택  M"
-	region_button.position = Vector2(790, 88)
-	region_button.custom_minimum_size = Vector2(160, 32)
+	region_button.text = "지역 선택  [M]"
+	region_button.position = Vector2(795, 87)
+	region_button.custom_minimum_size = Vector2(158, 36)
+	region_button.add_theme_font_size_override("font_size", 14)
+	region_button.add_theme_color_override("font_color", Color("e5c28a"))
+	region_button.add_theme_stylebox_override("normal", _style("223448", "35485a", 7))
+	region_button.add_theme_stylebox_override("hover", _style("30495f", "d9b878", 7))
 	region_button.pressed.connect(_toggle_region_map)
 	add_child(region_button)
 	region_popup = _panel(Vector2(430, 135), Vector2(420, 420), "223448")
@@ -520,7 +518,7 @@ func _generate_map() -> void:
 			if not walls.has(tile) and tile != START_TILE and tile.distance_to(START_TILE) > 2.5:
 				spawn_candidates.append(tile)
 	spawn_candidates.shuffle()
-	for i in range(mini(13,spawn_candidates.size())):
+	for i in range(mini(5,spawn_candidates.size())):
 		var kind: String = MONSTER_TYPES[(i + current_region) % MONSTER_TYPES.size()]
 		monsters[spawn_candidates[i]] = kind
 	var treasure_candidates: Array[Vector2i] = []
@@ -570,8 +568,9 @@ func _input(event: InputEvent) -> void:
 				_toggle_region_map()
 				return
 			KEY_R:
+				var before_count: int = monsters.size()
 				_respawn_monsters()
-				message = "테스트 몬스터 재출현!"
+				message = "몬스터가 일부 재출현했다." if monsters.size() > before_count else "이 지역에는 이미 몬스터가 충분하다."
 				_refresh()
 				return
 		if d != Vector2i.ZERO:
@@ -789,7 +788,20 @@ func _draw() -> void:
 			if visible_now and chests.has(p):
 				draw_rect(rect.grow(-10), Color("e5bb68"))
 			if visible_now and monsters.has(p):
-				draw_circle(rect.get_center(), 12, Color("e37d75"))
+				var kind: String = str(monsters[p])
+				var center: Vector2 = rect.get_center()
+				match kind:
+					"slime":
+						draw_circle(center, 8.5, Color("d87978"))
+					"wolf":
+						draw_circle(center, 11.0, Color("e37d75"))
+					"rat":
+						var points := PackedVector2Array([center + Vector2(0, -8), center + Vector2(8, 6), center + Vector2(-8, 6)])
+						draw_colored_polygon(points, Color("cb6a72"))
+					"beetle":
+						draw_rect(Rect2(center - Vector2(9, 9), Vector2(18, 18)), Color("b95b63"))
+					_:
+						draw_circle(center, 10, Color("e37d75"))
 			if p == player:
 				draw_circle(rect.get_center(), 13, Color("79c7fa"))
 				draw_arc(rect.get_center(), 15, 0, TAU, 24, Color("d7f1ff"), 2.0)
