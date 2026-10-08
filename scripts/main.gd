@@ -72,7 +72,6 @@ func _style(bg: String, border: String = "35485a", radius: int = 12) -> StyleBox
 func _panel(pos: Vector2, dimensions: Vector2, bg: String = "1b2938") -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.position = pos
-	panel.show_behind_parent = true
 	panel.custom_minimum_size = dimensions
 	panel.add_theme_stylebox_override("panel", _style(bg))
 	add_child(panel)
@@ -206,6 +205,7 @@ func _build_ui() -> void:
 	essence_label.add_theme_font_size_override("font_size", 12)
 	left_col.add_child(essence_label)
 	var middle := _panel(Vector2(267, 76), Vector2(697, 563))
+	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_make_label("◇  탐사 지도", Vector2(288, 91), 18, Color("eaf0f5"))
 	_make_label("WASD / 방향키", Vector2(827, 97), 12, Color("9fb3c5"))
 	_make_label("지도 범례", Vector2(287, 585), 12, Color("d9b878"))
