@@ -42,6 +42,8 @@ var activity_value: Label
 var day_value: Label
 var reward_label: RichTextLabel
 var history: Array[Dictionary] = []
+var settings_popup: PanelContainer
+var stat_values: Dictionary = {}
 
 func _ready() -> void:
 	_build_ui()
@@ -58,9 +60,72 @@ func _make_label(text_value: String, pos: Vector2, font_size: int, tint: Color =
 	add_child(label)
 	return label
 
-func _make_card_button(title_text: String, x: float, shortcut: String) -> void:
-	_make_label(title_text, Vector2(x, 672), 14, Color("d6e3ec"))
-	_make_label(shortcut, Vector2(x, 692), 10, Color("8096a8"))
+func _style(bg: String, border: String = "35485a", radius: int = 12) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(bg)
+	style.border_color = Color(border)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(radius)
+	style.set_content_margin_all(12)
+	return style
+
+func _panel(pos: Vector2, dimensions: Vector2, bg: String = "1b2938") -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.position = pos
+	panel.custom_minimum_size = dimensions
+	panel.add_theme_stylebox_override("panel", _style(bg))
+	add_child(panel)
+	return panel
+
+func _section(parent: Node, heading: String) -> VBoxContainer:
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 9)
+	parent.add_child(column)
+	var heading_label := Label.new()
+	heading_label.text = heading
+	heading_label.add_theme_color_override("font_color", Color("d9b878"))
+	heading_label.add_theme_font_size_override("font_size", 14)
+	column.add_child(heading_label)
+	return column
+
+func _stat_card(parent: Node, name: String, amount: String) -> void:
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(94, 38)
+	card.add_theme_stylebox_override("panel", _style("273a4d", "273a4d", 7))
+	parent.add_child(card)
+	var row_box := HBoxContainer.new()
+	card.add_child(row_box)
+	var label := Label.new()
+	label.text = name
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.add_theme_color_override("font_color", Color("9fb3c5"))
+	label.add_theme_font_size_override("font_size", 12)
+	row_box.add_child(label)
+	var value := Label.new()
+	value.text = amount
+	value.add_theme_font_size_override("font_size", 13)
+	row_box.add_child(value)
+	stat_values[name] = value
+
+func _make_menu_item(parent: Node, icon_text: String, title_text: String) -> void:
+	var row_box := VBoxContainer.new()
+	row_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	parent.add_child(row_box)
+	var symbol := Label.new()
+	symbol.text = icon_text
+	symbol.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	symbol.add_theme_color_override("font_color", Color("d9b878"))
+	symbol.add_theme_font_size_override("font_size", 19)
+	row_box.add_child(symbol)
+	var title_label := Label.new()
+	title_label.text = title_text
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.add_theme_font_size_override("font_size", 12)
+	row_box.add_child(title_label)
+
+func _toggle_settings() -> void:
+	settings_popup.visible = not settings_popup.visible
 
 func _build_ui() -> void:
 	var bg := ColorRect.new()
@@ -68,63 +133,137 @@ func _build_ui() -> void:
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.show_behind_parent = true
 	add_child(bg)
-	_make_label("THE GREAT LABYRINTH", Vector2(25, 9), 11, Color("d7b77b"))
-	_make_label("대미궁 아비스", Vector2(25, 26), 26, Color("f0f4fa"))
-	_make_label("제1층   /   초원 지대", Vector2(455, 30), 18, Color("e5c28a"))
-	_make_label("PC  ·  v0.2.3", Vector2(1130, 33), 13, Color("91a9bd"))
-	_make_label("탐사자", Vector2(29, 90), 17, Color("d9ba7e"))
-	_make_label("아이젠 하이르", Vector2(29, 121), 20, Color("f1f5f9"))
-	_make_label("인간  ·  탐사자", Vector2(29, 151), 13, Color("9fb3c4"))
-	_make_label("생명력", Vector2(29, 219), 13, Color("c4d2dd"))
-	_make_label("마력", Vector2(29, 279), 13, Color("c4d2dd"))
-	_make_label("경험치", Vector2(29, 339), 13, Color("c4d2dd"))
-	hp_value = _make_label("", Vector2(151, 219), 12)
-	mp_value = _make_label("", Vector2(151, 279), 12)
-	xp_value = _make_label("", Vector2(151, 339), 12)
-	_make_label("기본 능력치", Vector2(29, 403), 15, Color("d9ba7e"))
-	status_label = _make_label("", Vector2(29, 434), 14)
-	_make_label("탐사 지도", Vector2(286, 88), 18, Color("e4edf3"))
-	_make_label("WASD / 방향키", Vector2(790, 92), 12, Color("9fb6c6"))
-	_make_label("탐사 기록", Vector2(989, 90), 18, Color("d9ba7e"))
-	_make_label("최근 이벤트", Vector2(990, 143), 13, Color("9fb6c6"))
+	_make_label("THE GREAT LABYRINTH", Vector2(25, 7), 11, Color("d7b77b"))
+	_make_label("대미궁 아비스", Vector2(25, 24), 26, Color("f0f4fa"))
+	_make_label("제1층  ·  초원 지대", Vector2(512, 26), 18, Color("e5c28a"))
+	var settings_button := Button.new()
+	settings_button.text = "⚙"
+	settings_button.position = Vector2(1216, 15)
+	settings_button.custom_minimum_size = Vector2(43, 41)
+	settings_button.add_theme_font_size_override("font_size", 23)
+	settings_button.add_theme_stylebox_override("normal", _style("223448"))
+	settings_button.add_theme_stylebox_override("hover", _style("30495f", "d9b878"))
+	settings_button.pressed.connect(_toggle_settings)
+	add_child(settings_button)
+	var left := _panel(Vector2(15, 76), Vector2(240, 563))
+	var left_col := VBoxContainer.new()
+	left_col.add_theme_constant_override("separation", 12)
+	left.add_child(left_col)
+	var name_label := Label.new()
+	name_label.text = "아이젠 하이르"
+	name_label.add_theme_font_size_override("font_size", 19)
+	left_col.add_child(name_label)
+	var subtitle := Label.new()
+	subtitle.text = "인간  ·  탐사자"
+	subtitle.add_theme_color_override("font_color", Color("9fb3c5"))
+	left_col.add_child(subtitle)
+	status_label = Label.new()
+	status_label.add_theme_color_override("font_color", Color("d9b878"))
+	left_col.add_child(status_label)
+	for item in [["HP", "d9767d"], ["MP", "76a8e8"], ["EXP", "d9b56d"]]:
+		var group := VBoxContainer.new()
+		group.add_theme_constant_override("separation", 4)
+		left_col.add_child(group)
+		var line := HBoxContainer.new()
+		group.add_child(line)
+		var title_label := Label.new()
+		title_label.text = item[0]
+		title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		title_label.add_theme_font_size_override("font_size", 12)
+		line.add_child(title_label)
+		var amount := Label.new()
+		amount.add_theme_font_size_override("font_size", 12)
+		line.add_child(amount)
+		var progress := ProgressBar.new()
+		progress.custom_minimum_size = Vector2(200, 9)
+		progress.show_percentage = false
+		progress.max_value = 100
+		progress.add_theme_stylebox_override("background", _style("304256", "304256", 5))
+		progress.add_theme_stylebox_override("fill", _style(item[1], item[1], 5))
+		group.add_child(progress)
+		match item[0]:
+			"HP": hp_value = amount
+			"MP": mp_value = amount
+			"EXP": xp_value = amount
+		progress.set_meta("stat_type", item[0])
+		stat_values["bar_" + item[0]] = progress
+	var stat_column := _section(left_col, "기본 능력치")
+	var stat_grid := GridContainer.new()
+	stat_grid.columns = 2
+	stat_grid.add_theme_constant_override("h_separation", 6)
+	stat_grid.add_theme_constant_override("v_separation", 6)
+	stat_column.add_child(stat_grid)
+	for stat in [["STR", "20"], ["AGI", "5"], ["HP", "5"], ["MP", "5"], ["WIL", "5"], ["MAG", "5"], ["LUK", "20"]]:
+		_stat_card(stat_grid, stat[0], stat[1])
+	var gold_label := Label.new()
+	gold_label.add_theme_color_override("font_color", Color("f1c76d"))
+	gold_label.add_theme_font_size_override("font_size", 15)
+	left_col.add_child(gold_label)
+	stat_values["gold"] = gold_label
+	var essence_label := Label.new()
+	essence_label.text = "정수  ·  회색 송곳니"
+	essence_label.add_theme_font_size_override("font_size", 12)
+	left_col.add_child(essence_label)
+	var middle := _panel(Vector2(267, 76), Vector2(697, 563))
+	_make_label("◇  탐사 지도", Vector2(288, 91), 18, Color("eaf0f5"))
+	_make_label("WASD / 방향키", Vector2(827, 97), 12, Color("9fb3c5"))
+	_make_label("지도 범례", Vector2(287, 585), 12, Color("d9b878"))
+	var legend_data := [["플레이어", 307, 603], ["몬스터", 510, 603], ["보물상자", 713, 603], ["장애물", 307, 620], ["미탐사", 510, 620], ["탐사 지역", 713, 620]]
+	for item in legend_data:
+		_make_label(str(item[0]), Vector2(float(item[1]) + 14, float(item[2]) - 2), 11, Color("a5b6c7"))
+	var right := _panel(Vector2(977, 76), Vector2(288, 563))
+	var right_col := VBoxContainer.new()
+	right_col.add_theme_constant_override("separation", 12)
+	right.add_child(right_col)
+	var heading := Label.new()
+	heading.text = "탐사 기록"
+	heading.add_theme_color_override("font_color", Color("d9b878"))
+	heading.add_theme_font_size_override("font_size", 18)
+	right_col.add_child(heading)
 	reward_label = RichTextLabel.new()
-	reward_label.position = Vector2(990, 173)
-	reward_label.size = Vector2(250, 240)
+	reward_label.custom_minimum_size = Vector2(255, 345)
+	reward_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	reward_label.bbcode_enabled = true
 	reward_label.scroll_active = true
 	reward_label.scroll_following = false
-	reward_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	reward_label.add_theme_font_size_override("normal_font_size", 14)
-	add_child(reward_label)
-	log_label = _make_label("", Vector2(990, 408), 12, Color("a5b6c7"))
-	log_label.size = Vector2(250, 28)
+	right_col.add_child(reward_label)
+	var progress_title := Label.new()
+	progress_title.text = "탐사 진행"
+	progress_title.add_theme_color_override("font_color", Color("d9b878"))
+	right_col.add_child(progress_title)
+	activity_value = Label.new()
+	right_col.add_child(activity_value)
+	day_value = Label.new()
+	day_value.add_theme_color_override("font_color", Color("9fb3c5"))
+	right_col.add_child(day_value)
+	log_label = Label.new()
 	log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_make_label("지도 범례", Vector2(286, 603), 12, Color("d9ba7e"))
-	for legend in [["플레이어", 320, 612], ["몬스터", 535, 612], ["보물상자", 750, 612], ["장애물", 320, 629], ["미탐사", 535, 629], ["탐사 지역", 750, 629]]:
-		_make_label(str(legend[0]), Vector2(float(legend[1]), float(legend[2])), 11, Color("a5b6c7"))
-	_make_label("탐사 진행", Vector2(990, 454), 14, Color("d9ba7e"))
-	activity_value = _make_label("", Vector2(990, 484), 15)
-	day_value = _make_label("", Vector2(990, 520), 14, Color("aebfcf"))
-	_make_label("조작 안내", Vector2(990, 565), 13, Color("d9ba7e"))
-	_make_label("E  상자 열기", Vector2(990, 592), 12, Color("aebfcf"))
-	_make_label("F5  저장   ·   F9  불러오기", Vector2(990, 612), 12, Color("aebfcf"))
-	_make_card_button("탐사", 42, "W A S D")
-	_make_card_button("캐릭터", 257, "준비 중")
-	_make_card_button("가방", 461, "준비 중")
-	_make_card_button("장비", 663, "11슬롯 예정")
-	_make_card_button("정수", 862, "준비 중")
-	_make_card_button("도감", 1070, "준비 중")
+	log_label.add_theme_font_size_override("font_size", 11)
+	log_label.add_theme_color_override("font_color", Color("9fb3c5"))
+	right_col.add_child(log_label)
+	var bottom := _panel(Vector2(15, 650), Vector2(1250, 62))
+	var bottom_row := HBoxContainer.new()
+	bottom_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bottom_row.add_theme_constant_override("separation", 4)
+	bottom.add_child(bottom_row)
+	for item in [["◇", "탐사"], ["♙", "캐릭터"], ["▣", "가방"], ["♜", "장비"], ["✦", "정수"], ["▤", "도감"]]:
+		_make_menu_item(bottom_row, item[0], item[1])
+	settings_popup = _panel(Vector2(996, 66), Vector2(265, 172), "223448")
+	var settings_content := VBoxContainer.new()
+	settings_content.add_theme_constant_override("separation", 12)
+	settings_popup.add_child(settings_content)
+	for item in ["설정", "게임 설정  ·  준비 중", "화면 설정  ·  준비 중", "사운드 설정  ·  준비 중"]:
+		var label := Label.new()
+		label.text = item
+		label.add_theme_font_size_override("font_size", 14)
+		settings_content.add_child(label)
+	settings_popup.visible = false
 	battle_panel = PanelContainer.new()
 	battle_panel.position = Vector2(294, 176)
 	battle_panel.custom_minimum_size = Vector2(652, 365)
 	battle_panel.visible = false
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("1d2c3c")
-	style.border_color = Color("b59660")
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(12)
-	style.set_content_margin_all(16)
-	battle_panel.add_theme_stylebox_override("panel", style)
+	battle_panel.add_theme_stylebox_override("panel", _style("1d2c3c", "b59660"))
 	add_child(battle_panel)
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 13)
@@ -328,7 +467,11 @@ func _refresh() -> void:
 	hp_value.text = "%d / %d" % [hp, max_hp]
 	mp_value.text = "%d / 30" % mp
 	xp_value.text = "%d / %d" % [exp_points, level * 100]
-	status_label.text = "Lv. %d\n\nSTR  20      AGI   5\nHP     5      MP    5\nWIL    5      MAG   5\nLUK  20\n\n골드  %d G\n정수  회색 송곳니" % [level, gold]
+	status_label.text = "Lv. %d" % level
+	stat_values["gold"].text = "◈  %d G" % gold
+	stat_values["bar_HP"].value = 100.0 * float(hp) / float(maxi(1, max_hp))
+	stat_values["bar_MP"].value = 100.0 * float(mp) / 30.0
+	stat_values["bar_EXP"].value = 100.0 * float(exp_points) / float(maxi(1, level * 100))
 	log_label.text = message
 	var entries: Array[String] = []
 	for event_data in history:
@@ -353,35 +496,14 @@ func _refresh() -> void:
 		buttons[3].disabled = ap < 0.5
 	queue_redraw()
 
-func _card(rect: Rect2, color: Color) -> void:
-	draw_rect(rect, color)
-	draw_rect(rect, Color("35475a"), false, 1.0)
-
-func _bar(y: float, fraction: float, tint: Color) -> void:
-	var width_value: float = 205.0
-	draw_rect(Rect2(29, y, width_value, 9), Color("304052"))
-	draw_rect(Rect2(29, y, width_value * clampf(fraction, 0.0, 1.0), 9), tint)
-
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 720), Color("101923"))
 	draw_rect(Rect2(0, 65, 1280, 2), Color("b59660"))
-	_card(Rect2(15, 77, 239, 563), Color("1b2938"))
-	_card(Rect2(267, 77, 697, 563), Color("1b2938"))
-	_card(Rect2(977, 77, 288, 563), Color("1b2938"))
-	_card(Rect2(15, 650, 1250, 63), Color("1b2938"))
-	draw_rect(Rect2(29, 190, 205, 1), Color("3b4e60"))
-	draw_rect(Rect2(29, 390, 205, 1), Color("3b4e60"))
-	_bar(244, float(hp) / float(maxi(1, 100 + (level - 1) * 20)), Color("d96b76"))
-	_bar(304, float(mp) / 30.0, Color("649ee8"))
-	_bar(364, float(exp_points) / float(maxi(1, level * 100)), Color("d8b66f"))
-	draw_rect(Rect2(989, 131, 263, 1), Color("3b4e60"))
 	for i in range(6):
-		var sx: float = 305.0 + float(i % 3) * 215.0
-		var sy: float = 615.0 + float(i / 3) * 17.0
-		var tint: Color = [Color("79c7fa"), Color("e37d75"), Color("e5bb68"), Color("5b6872"), Color("0d1720"), Color("385f50")][i]
-		draw_rect(Rect2(sx, sy, 9, 9), tint)
-	draw_rect(Rect2(989, 438, 263, 1), Color("3b4e60"))
-	draw_rect(Rect2(989, 551, 263, 1), Color("3b4e60"))
+		var sx: float = 291.0 + float(i % 3) * 203.0
+		var sy: float = 606.0 + float(i / 3) * 17.0
+		var colors: Array[Color] = [Color("79c7fa"), Color("e37d75"), Color("e5bb68"), Color("5b6872"), Color("0d1720"), Color("385f50")]
+		draw_rect(Rect2(sx, sy, 9, 9), colors[i])
 	for y in range(H):
 		for x in range(W):
 			var p: Vector2i = Vector2i(x, y)
