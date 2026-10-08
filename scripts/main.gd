@@ -2,8 +2,8 @@ extends Control
 
 const W := 17
 const H := 13
-const CELL := 36
-const ORIGIN := Vector2(305, 135)
+const CELL := 33
+const ORIGIN := Vector2(335, 145)
 const SAVE_PATH := "user://abyss_save.json"
 const DIRS := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 
@@ -66,7 +66,14 @@ func _style(bg: String, border: String = "35485a", radius: int = 12) -> StyleBox
 	style.border_color = Color(border)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(radius)
-	style.set_content_margin_all(12)
+	style.set_content_margin_all(10)
+	return style
+
+func _slim_style(bg: String) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(bg)
+	style.set_corner_radius_all(4)
+	style.set_content_margin_all(0)
 	return style
 
 func _panel(pos: Vector2, dimensions: Vector2, bg: String = "1b2938") -> PanelContainer:
@@ -90,7 +97,7 @@ func _section(parent: Node, heading: String) -> VBoxContainer:
 
 func _stat_card(parent: Node, name: String, amount: String) -> void:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(94, 38)
+	card.custom_minimum_size = Vector2(94, 32)
 	card.add_theme_stylebox_override("panel", _style("273a4d", "273a4d", 7))
 	parent.add_child(card)
 	var row_box := HBoxContainer.new()
@@ -138,16 +145,19 @@ func _build_ui() -> void:
 	_make_label("제1층  ·  초원 지대", Vector2(512, 26), 18, Color("e5c28a"))
 	var settings_button := Button.new()
 	settings_button.text = "⚙"
-	settings_button.position = Vector2(1216, 15)
-	settings_button.custom_minimum_size = Vector2(43, 41)
-	settings_button.add_theme_font_size_override("font_size", 23)
+	settings_button.position = Vector2(1220, 12)
+	settings_button.custom_minimum_size = Vector2(34, 34)
+	settings_button.add_theme_font_size_override("font_size", 17)
+	settings_button.add_theme_color_override("font_color", Color("d9b878"))
+	settings_button.add_theme_color_override("font_hover_color", Color("f1d6a3"))
 	settings_button.add_theme_stylebox_override("normal", _style("223448"))
 	settings_button.add_theme_stylebox_override("hover", _style("30495f", "d9b878"))
+	settings_button.add_theme_stylebox_override("pressed", _style("30495f", "d9b878"))
 	settings_button.pressed.connect(_toggle_settings)
 	add_child(settings_button)
 	var left := _panel(Vector2(15, 76), Vector2(240, 563))
 	var left_col := VBoxContainer.new()
-	left_col.add_theme_constant_override("separation", 12)
+	left_col.add_theme_constant_override("separation", 8)
 	left.add_child(left_col)
 	var name_label := Label.new()
 	name_label.text = "아이젠 하이르"
@@ -175,11 +185,11 @@ func _build_ui() -> void:
 		amount.add_theme_font_size_override("font_size", 12)
 		line.add_child(amount)
 		var progress := ProgressBar.new()
-		progress.custom_minimum_size = Vector2(200, 9)
+		progress.custom_minimum_size = Vector2(200, 7)
 		progress.show_percentage = false
 		progress.max_value = 100
-		progress.add_theme_stylebox_override("background", _style("304256", "304256", 5))
-		progress.add_theme_stylebox_override("fill", _style(item[1], item[1], 5))
+		progress.add_theme_stylebox_override("background", _slim_style("304256"))
+		progress.add_theme_stylebox_override("fill", _slim_style(item[1]))
 		group.add_child(progress)
 		match item[0]:
 			"HP": hp_value = amount
@@ -191,7 +201,7 @@ func _build_ui() -> void:
 	var stat_grid := GridContainer.new()
 	stat_grid.columns = 2
 	stat_grid.add_theme_constant_override("h_separation", 6)
-	stat_grid.add_theme_constant_override("v_separation", 6)
+	stat_grid.add_theme_constant_override("v_separation", 4)
 	stat_column.add_child(stat_grid)
 	for stat in [["STR", "20"], ["AGI", "5"], ["HP", "5"], ["MP", "5"], ["WIL", "5"], ["MAG", "5"], ["LUK", "20"]]:
 		_stat_card(stat_grid, stat[0], stat[1])
@@ -209,8 +219,8 @@ func _build_ui() -> void:
 	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_make_label("◇  탐사 지도", Vector2(288, 91), 18, Color("eaf0f5"))
 	_make_label("WASD / 방향키", Vector2(827, 97), 12, Color("9fb3c5"))
-	_make_label("지도 범례", Vector2(287, 585), 12, Color("d9b878"))
-	var legend_data := [["플레이어", 307, 603], ["몬스터", 510, 603], ["보물상자", 713, 603], ["장애물", 307, 620], ["미탐사", 510, 620], ["탐사 지역", 713, 620]]
+	_make_label("지도 범례", Vector2(287, 586), 12, Color("d9b878"))
+	var legend_data := [["플레이어", 307, 605], ["몬스터", 510, 605], ["보물상자", 713, 605], ["장애물", 307, 622], ["미탐사", 510, 622], ["탐사 지역", 713, 622]]
 	for item in legend_data:
 		_make_label(str(item[0]), Vector2(float(item[1]) + 14, float(item[2]) - 2), 11, Color("a5b6c7"))
 	var right := _panel(Vector2(977, 76), Vector2(288, 563))
@@ -224,6 +234,8 @@ func _build_ui() -> void:
 	right_col.add_child(heading)
 	reward_label = RichTextLabel.new()
 	reward_label.custom_minimum_size = Vector2(255, 345)
+	reward_label.add_theme_color_override("default_color", Color("eaf0f5"))
+	reward_label.text = "[color=#9fb3c5]아직 탐사 기록이 없습니다.[/color]"
 	reward_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	reward_label.bbcode_enabled = true
 	reward_label.scroll_active = true
@@ -487,7 +499,7 @@ func _refresh() -> void:
 		if not reward_parts.is_empty():
 			line += "\n[font_size=12]" + "    ".join(reward_parts) + "[/font_size]"
 		entries.append(line)
-	reward_label.text = "\n\n".join(entries)
+	reward_label.text = "\n\n".join(entries) if not entries.is_empty() else "[color=#9fb3c5]아직 탐사 기록이 없습니다.[/color]"
 	reward_label.scroll_to_line(0)
 	activity_value.text = "활동   %d / 10" % activity
 	day_value.text = "던전   %d일차" % day
@@ -504,7 +516,7 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 65, 1280, 2), Color("b59660"))
 	for i in range(6):
 		var sx: float = 291.0 + float(i % 3) * 203.0
-		var sy: float = 606.0 + float(i / 3) * 17.0
+		var sy: float = 608.0 + float(i / 3) * 17.0
 		var colors: Array[Color] = [Color("79c7fa"), Color("e37d75"), Color("e5bb68"), Color("5b6872"), Color("0d1720"), Color("385f50")]
 		draw_rect(Rect2(sx, sy, 9, 9), colors[i])
 	for y in range(H):
