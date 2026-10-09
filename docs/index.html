@@ -18,7 +18,7 @@
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),name=document.getElementById('name'),message=document.getElementById('message'),action=document.getElementById('action'),status=document.getElementById('status');
 const W=960,H=640;let scene='town',pos={x:480,y:480},keys=new Set(),last=performance.now();
 const portals={town:{x:480,y:160},abyss:{x:480,y:550}};
-const roomTypes=['보물방','정예방','균열방','빈 방','소재방'];let roomAssignments=[];function rollRooms(){roomAssignments=Array.from({length:6},()=>{const roll=Math.random();return roll<.14?'균열방':roomTypes[Math.floor(Math.random()*4)===2?4:Math.floor(Math.random()*4)]})}rollRooms();const rooms=[{x:60,y:65,w:260,h:180},{x:350,y:60,w:260,h:180},{x:640,y:65,w:260,h:180},{x:60,y:310,w:260,h:190},{x:350,y:300,w:260,h:190},{x:640,y:310,w:260,h:190}];
+const roomTypes=['보물방','정예방','균열방','빈 방','소재방'];let roomAssignments=[];function rollRooms(){roomAssignments=Array.from({length:6},()=>{const roll=Math.random();return roll<.14?'균열방':['보물방','정예방','빈 방','소재방'][Math.floor(Math.random()*4)]})}rollRooms();const rooms=[{x:60,y:65,w:260,h:180},{x:350,y:60,w:260,h:180},{x:640,y:65,w:260,h:180},{x:60,y:310,w:260,h:190},{x:350,y:300,w:260,h:190},{x:640,y:310,w:260,h:190}];
 function resize(){const d=Math.min(devicePixelRatio||1,2);canvas.width=innerWidth*d;canvas.height=innerHeight*d;ctx.setTransform(d,0,0,d,0,0)}addEventListener('resize',resize);resize();
 function label(t){message.textContent=t}
 function near(a,b,r=78){return Math.hypot(a.x-b.x,a.y-b.y)<r}
@@ -26,7 +26,7 @@ function travel(){if(!near(pos,portals[scene])){label('포탈 가까이에서 �
 if(scene==='town'){scene='abyss';rollRooms();pos={x:480,y:475};label('미궁 1층에 진입했습니다.')}else{scene='town';pos={x:480,y:250};label('마을로 귀환했습니다.')}
 name.textContent=scene==='town'?'마을':'어비스 · 미궁 1층';status.textContent=scene==='town'?'안전 지역':'1층 · 탐험 가능'}
 action.addEventListener('click',travel);addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();keys.add(k);if(k==='e'&&!e.repeat)travel()});addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>keys.clear());
-for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>keys.delete(k))});
+
 function rect(x,y,w,h,fill,stroke){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=3;ctx.strokeRect(x,y,w,h)}}
 function text(t,x,y,size=17,color='#eee'){ctx.fillStyle=color;ctx.font='600 '+size+'px system-ui';ctx.textAlign='center';ctx.fillText(t,x,y)}
 function portal(x,y,color,caption,time){ctx.save();ctx.translate(x,y);ctx.shadowBlur=28;ctx.shadowColor=color;ctx.strokeStyle=color;ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(0,0,33,43,0,0,Math.PI*2);ctx.stroke();ctx.fillStyle=color+'55';ctx.beginPath();ctx.ellipse(0,0,24+Math.sin(time*2)*3,34,0,0,Math.PI*2);ctx.fill();ctx.restore();text(caption,x,y-62,17,'#f6dfac')}
