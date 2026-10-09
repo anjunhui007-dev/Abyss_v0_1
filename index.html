@@ -55,15 +55,14 @@ function essenceView(){
  const gradeTable='<details class="panel"><summary>층별 몬스터 등급 분포 기준</summary><div class="grid">'+gradeBands.map((g,i)=>'<div class="card">'+(i+1)+'층 · '+g+'등급</div>').join('')+'</div><p class="muted">등급은 강함을 나타내며 1등급이 최고입니다. 층별 범위는 참고용이며 예외가 있습니다.</p></details>';
  app.innerHTML=head('ESSENCE ARCHIVE','정수 도감','중복 정수는 한 번만 표시 · 화살표를 눌러 상세 정보 확인')+gradeTable+
  '<div class="toolbar"><input placeholder="몬스터 이름 검색" value="'+esc(essenceQuery)+'" oninput="essenceQuery=this.value;essenceResults()"><select onchange="essenceFloor=this.value;essenceResults()"><option value="all">전체 층</option>'+floors.map(f=>'<option value="'+f.n+'" '+(essenceFloor==f.n?'selected':'')+'>'+f.n+'층</option>').join('')+'</select><select onchange="essenceGrade=this.value;essenceResults()"><option value="all">전체 등급</option>'+Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'" '+(essenceGrade==i+1?'selected':'')+'>'+(i+1)+'등급</option>').join('')+'</select></div>'+
- '<details class="panel"><summary>스탯별 검색 · 복수 선택 가능</summary><p class="muted">체크하면 즉시 검색됩니다. 여러 스탯을 선택하면 모든 조건을 만족하는 정수만 표시합니다.</p><div class="essence-stat-grid">'+essenceStatNames.map(x=>'<label><input type="checkbox" style="min-width:0;flex:none" '+(essenceStats.has(x)?'checked':'')+' data-essence-stat="'+esc(x)+'" onchange="essenceSetStat(this.getAttribute('data-essence-stat'),this.checked)"> '+x+'</label>').join('')+'</div><div class="essence-stat-actions"><button class="essence-search-btn" onclick="essenceApplyStats()">검색 결과 새로고침</button><button class="back" onclick="essenceClearStats()">초기화</button></div><p id="essenceFilterStatus" class="muted"></p></details>'+
  '<div class="essence-controls"><span id="essenceCount" class="muted"></span><button onclick="essenceOpen.clear();essenceResults()">모두 접기</button></div><div id="essenceResults" class="essence-list"></div>';
  essenceResults();essenceSetStatStatus()
 }
 function essenceSetStatStatus(){const e=document.getElementById('essenceFilterStatus');if(e)e.textContent=essenceStats.size+'개 선택됨'+(essenceAppliedStats.size?' · 적용 중: '+[...essenceAppliedStats].join(', '):'')}
 function essenceToggle(id){if(essenceOpen.has(id))essenceOpen.delete(id);else essenceOpen.add(id);essenceResults()}
 function essenceResults(){
- const r=essenceUnique.filter(x=>(essenceFloor==='all'||x.floors.includes(Number(essenceFloor)))&&(essenceGrade==='all'||x.grade==essenceGrade)&&x.displayName.toLowerCase().includes(essenceQuery.toLowerCase())&&[...essenceAppliedStats].every(k=>(x.stats||'').split(',').some(part=>part.trim().startsWith(k+' +'))));
- document.getElementById('essenceCount').textContent=r.length+'종 / 전체 '+essenceUnique.length+'종'+(essenceAppliedStats.size?' · 적용: '+[...essenceAppliedStats].join(', '):'');essenceSetStatStatus();
+ const r=essenceUnique.filter(x=>(essenceFloor==='all'||x.floors.includes(Number(essenceFloor)))&&(essenceGrade==='all'||x.grade==essenceGrade)&&x.displayName.toLowerCase().includes(essenceQuery.toLowerCase()));
+ document.getElementById('essenceCount').textContent=r.length+'종 / 전체 '+essenceUnique.length+'종';essenceSetStatStatus();
  document.getElementById('essenceResults').innerHTML=r.map(x=>{
  const open=essenceOpen.has(x.id);
  return '<div class="essence-item"><button class="essence-line" aria-expanded="'+open+'" onclick="essenceToggle('+JSON.stringify(x.id).replace(/"/g,'&quot;')+')"><span class="essence-arrow">'+(open?'⌄':'›')+'</span><strong class="essence-name">'+esc(x.displayName)+'</strong><span class="essence-stats">'+(x.stats?esc(x.stats):'스탯 정보 입력 대기')+'</span></button>'+
