@@ -1,6 +1,0 @@
-{
-  "slime": {"name":"슬라임","hp":32,"atk":7,"def":2,"exp":12,"gold":9,"color":"#70d59c"},
-  "wolf": {"name":"회색 늑대","hp":42,"atk":12,"def":3,"exp":16,"gold":14,"color":"#c4cbd7"},
-  "rat": {"name":"이끼 쥐","hp":26,"atk":9,"def":1,"exp":11,"gold":7,"color":"#bd9e75"},
-  "beetle": {"name":"껍질 딱정벌레","hp":55,"atk":8,"def":8,"exp":17,"gold":12,"color":"#b2a06b"}
-}
