@@ -58,6 +58,25 @@ header{padding:10px 12px 4px;flex-direction:row;align-items:center}header h1{fon
 .layout>section.panel>.actions{display:none}
 }
 @media(min-width:681px){.mobile-controls .side-action{display:none}.mobile-controls .dpad{display:none}}
+
+/* Refined mobile controls: centered full-size D-pad with raised compact side actions */
+@media(max-width:680px){
+.mobile-controls{position:relative;display:flex;align-items:flex-start;justify-content:center;height:117px;margin:12px 0 6px;padding:0;background:transparent}
+.mobile-controls .dpad{display:grid;flex:none;width:202px;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,52px);gap:5px;margin:0}
+.mobile-controls .dpad button{min-width:0;width:64px;height:52px;font-size:23px}
+.mobile-controls .side-action{position:absolute;top:26px;width:clamp(43px,12vw,51px);height:42px;min-height:0;padding:3px 1px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0;font-size:18px;line-height:1.1;border-radius:10px;background:#25384e;border:1px solid #536b87;box-shadow:0 3px 9px #0003}
+.mobile-controls #mobileInteract{left:max(0px,calc(50% - 175px))}
+.mobile-controls #mobileCamp{right:max(0px,calc(50% - 175px))}
+.mobile-controls .side-action small{font-size:9px;line-height:1.3;white-space:nowrap;color:#d3dfed}
+.layout>section.panel>.actions{display:none}
+}
+@media(max-width:350px){
+.mobile-controls .dpad{width:175px;grid-template-columns:repeat(3,55px);grid-template-rows:repeat(2,49px);gap:5px}
+.mobile-controls .dpad button{width:55px;height:49px}
+.mobile-controls #mobileInteract{left:0}
+.mobile-controls #mobileCamp{right:0}
+.mobile-controls{height:108px}
+}
 </style></head><body>
 <header><div><div class="sub">THE GREAT LABYRINTH</div><h1>대미궁 아비스</h1></div><div class="toolbar"><button id="save">저장</button><button id="load">불러오기</button><button id="newrun">새 탐사 회차</button></div></header>
 <div class="mobile-hud"><div class="between"><strong>아이젠 하이르 · <span id="mlevel">Lv. 1</span></strong><span id="mday" class="muted"></span></div><div class="between"><span>HP</span><span id="mhptext"></span></div><div class="meter"><span id="mhpbar"></span></div><div class="between"><span>MP</span><span id="mmptext"></span></div><div class="meter mp"><span id="mmpbar"></span></div></div><main class="layout"><aside class="panel"><h2>탐사자 · 아이젠 하이르</h2><div class="between"><strong id="level"></strong><span class="muted" id="day"></span></div><div class="line"></div><div class="between"><span>HP</span><span id="hptext"></span></div><div class="meter"><span id="hpbar"></span></div><div class="between"><span>MP</span><span id="mptext"></span></div><div class="meter mp"><span id="mpbar"></span></div><div class="between"><span>EXP</span><span id="xptext"></span></div><div class="meter xp"><span id="xpbar"></span></div><h2>능력치</h2><div class="stats" id="stats"></div><div class="actions"><button id="allocate">능력치 투자 [N]</button></div><div class="line"></div><div class="between"><span>보유 골드</span><strong class="gold" id="gold"></strong></div><div class="between"><span>정수</span><strong id="essence">없음</strong></div></aside>
